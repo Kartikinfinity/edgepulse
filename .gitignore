@@ -1,0 +1,27 @@
+# heavy artefacts — never commit
+data/
+artifacts/
+.venv/
+.pio/
+*.npz
+*.tflite
+*.h5
+*.keras
+*.ckpt*
+__pycache__/
+*.pyc
+
+# audio evidence is kept selectively under docs/experiments, not at large
+*.wav
+!docs/experiments/**/*.wav
+*.pcm
+!docs/experiments/**/*.pcm
+
+# local config / secrets
+firmware/src/secrets.h
+server/.env
+*.local.json
+
+# OS
+.DS_Store
+Thumbs.db
