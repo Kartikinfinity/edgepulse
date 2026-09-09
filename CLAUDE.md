@@ -1,8 +1,8 @@
 # CLAUDE.md — orientation for any session in this repository
 
 **Project:** SIH 2026 · PS **26172** — *Low Latency and Efficient Voice Activator for Edge Devices* (ISRO / Dept. of Space)
-**Keyword:** **NOT YET SELECTED** — selection is reopened and is the project's first task.
-**Phase:** **Dataset-first restart.** No approved dataset exists (`DECISIONS.md` D-010).
+**Keyword:** **`Takshila`** /t̪əkˈʃiː.laː/ ("tuk-SHEE-laa") — confirmed and binding, `DECISIONS.md` D-011.
+**Phase:** **Dataset-first restart.** Keyword settled; **no dataset exists yet** (D-010).
 
 ---
 
@@ -67,9 +67,15 @@ set `SIH_UPLOAD_PORT` in `.env`.
 
 ```
 DATASET STATUS: NOT YET CREATED
-NEXT OBJECTIVE: select the optimal custom keyword, then design and build
-                the project-specific KWS dataset from first principles.
+KEYWORD:        "Takshila" - CONFIRMED (D-011)
+NEXT OBJECTIVE: write the recording protocol, run ONE pilot session and
+                measure it, then collect the dataset.
 ```
+
+**Keyword facts you will need constantly.** `Takshila` = 3 syllables, 7 phonemes,
+CVC·CV·CV. Its hard negatives are the **क्ष family** (*shiksha, raksha, lakshya, moksha*)
+and the **/tæks/ family** (*taxi, tax, tactical, taxonomy*) — both must be in **training**,
+not only in test. Full analysis and the complete data specification: `KEYWORD_SELECTION.md`.
 
 The previously supplied corpus was **deprecated and removed** (`DECISIONS.md` D-010,
 `DATASET_RESET_AUDIT.md`). It must not be used for training, validation, testing,
@@ -201,20 +207,19 @@ pio device monitor
 
 ## 8. Current priorities — dataset-first
 
-1. **Keyword selection.** Define criteria, then choose, then record it as a decision.
-   No incumbent keyword; the old one carries no weight.
-2. **Dataset design specification**, written *before* any recording — speakers,
-   utterances, environments, distances, positional offsets, hard negatives,
-   backgrounds, split policy (speaker-disjoint), licences.
-3. **Recording protocol**, then collection — **keeping every raw session**.
-4. **Curate, build, version and fingerprint** the dataset.
-5. **Only then**: features, the streaming evaluation harness (before any model), training.
+1. ~~Keyword selection~~ ✅ **DONE — `Takshila` (D-011).** Do not reopen it.
+2. ~~Dataset design specification~~ ✅ **DONE — `KEYWORD_SELECTION.md` §§13–15.** Use it;
+   do not redesign it.
+3. **Recording protocol + ONE pilot session, measured** — the current task.
+4. Collection — **keeping every raw session**, speaker IDs recorded from the first file.
+5. Curate, build, version and fingerprint the dataset.
+6. **Only then**: features, the streaming evaluation harness (before any model), training.
 
 Hardware bring-up (`BUILD_PLAN.md` Phase A) is independent of the dataset and may proceed
 in parallel once the pin map arrives.
 
 **Open blockers:** **B-1** authoritative pin map · **B-3** 2.4 GHz Wi-Fi credentials ·
-**B-5** no keyword selected · **B-6** no dataset. Live detail in `STATUS.md`.
+**B-6** no dataset. (**B-5** keyword — resolved.) Live detail in `STATUS.md`.
 
 ## 9. What NOT to redo
 

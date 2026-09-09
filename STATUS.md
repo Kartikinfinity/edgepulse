@@ -10,6 +10,8 @@
 any directory on Windows or Linux; all paths resolve through `config/paths.py`. Start a new
 machine from **`CURRENT_HANDOFF.md`**, which has a NEXT SESSION START block.
 
+**Keyword settled:** **`Takshila`** (D-011). The dataset can now be specified and collected.
+
 **Board status:** the ESP32 was attached on **COM7 on the original machine** (B-2 resolved
 there). Port names differ per machine — never hard-code one.
 
@@ -24,7 +26,7 @@ there). Port names differ per machine — never hard-code one.
 | Project documentation | ✅ complete |
 | Cross-machine portability + handoff | ✅ complete (D-009) |
 | Machine setup / verification / health scripts | ✅ complete |
-| **Keyword selected** | ❌ **none — selection reopened** |
+| **Keyword selected** | ✅ **`Takshila`** — confirmed, binding (D-011) |
 | **Approved dataset** | ❌ **none — must be built from scratch** |
 | Raw recordings collected | ❌ none |
 | Python environment | ❌ not created (scripted: `scripts/setup.*`) |
@@ -76,15 +78,14 @@ Fallback is weaker than assumed: the adapter reports `Hosted network supported: 
 legacy SoftAP path is unavailable; Windows Mobile Hotspot may still work via WiFi-Direct but
 is untested.
 
-### 🟡 B-5 — Keyword: research complete, **awaiting user confirmation**
-The selection research is done — `KEYWORD_SELECTION.md`: 18 candidates, a weighted 20-criterion
-matrix, phonetic analysis, hard-negative derivation and a licence audit, all against current
-published sources (Picovoice, Espressif ESP-SR, FakeWake, Schönherr et al., Amazon's wake-word
-patent, Indian English phonology).
+### 🟢 B-5 — Keyword — RESOLVED 2026-09-09
+**`Takshila`** /t̪əkˈʃiː.laː/ ("tuk-SHEE-laa") — **confirmed and binding**, `DECISIONS.md`
+**D-011**, on the research in `KEYWORD_SELECTION.md` (18 candidates, weighted 20-criterion
+matrix, phonetic + hard-negative analysis, licence audit, against Picovoice, Espressif ESP-SR,
+FakeWake, Schönherr et al., Amazon's wake-word patent and Indian English phonology).
 
-**Recommendation: `Takshila` /t̪əkˈʃiː.laː/** — 3 syllables, 7 phonemes, 4 manner classes.
-**Not yet binding.** Confirm or reject, then it is recorded as D-011.
-**Blocks:** B-6 and everything downstream of the dataset.
+3 syllables · 7 phonemes · 4 manner classes · 5 places of articulation.
+**Changing it later invalidates every recording made.** Do not reopen it.
 
 ### 🔴 B-6 — No approved dataset
 `DATASET.md` status is **NOT YET CREATED**. No recordings have been collected.
@@ -129,8 +130,9 @@ use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets t
 
 ## Immediate next actions
 
-1. **Keyword selection** — define the criteria, choose, record it as a decision (**B-5**).
-2. **Dataset design specification** — written before any recording (**B-6**). `DATASET.md` §5.
+1. ~~Keyword selection~~ ✅ done — `Takshila` (D-011).
+2. **Recording protocol, then ONE measured pilot session** — before recruiting any speaker.
+   The data specification already exists: `KEYWORD_SELECTION.md` §§13–15 (**B-6**).
 3. **In parallel, hardware-side and dataset-independent:** environment setup (A1), the
    PlatformIO skeleton (A2), and — once the pin map arrives — bring-up A3–A6.
 4. **Still needed from the user:** the authoritative pin map (**B-1**) and the 2.4 GHz Wi-Fi

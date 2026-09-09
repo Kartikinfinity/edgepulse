@@ -1,7 +1,7 @@
 # KEYWORD_SELECTION.md — scientific selection of the custom wake keyword
 
-**Date:** 2026-09-09 · **Status:** research complete, **recommendation pending user confirmation**
-**Nothing has been trained. No dataset has been collected.**
+**Date:** 2026-09-09 · **Status:** research complete · **KEYWORD CONFIRMED: `Takshila`**
+Recorded as binding decision **D-011**. **Nothing has been trained. No dataset has been collected.**
 
 This document delivers the 15 required outputs. Every external claim carries a source.
 Where a number is a *prediction* rather than a *measurement*, it is labelled as such — no
@@ -397,7 +397,7 @@ discriminate, and is scored honestly as such).
 # **Takshila**  /t̪əkˈʃiː.laː/ — "tuk-SHEE-laa"
 
 3 syllables · 7 phonemes · CVC·CV·CV
-**Recommended, pending your confirmation.** Not yet recorded as a binding decision.
+**CONFIRMED and binding** — `DECISIONS.md` **D-011**.
 
 ---
 
@@ -573,10 +573,13 @@ accuracy" — report FRR at a stated FA/h.
 
 ### 15.6 Immediate next actions
 
-1. **Confirm or reject `Takshila`.** This document is a recommendation, not a decision.
-2. On confirmation: record the decision as **D-011**, update `DATASET.md`, and only then
-3. Write the recording protocol and run **one pilot session** with `tools/audio_probe.py` and
-   `tools/audio_probe_bands.py` before recruiting speakers.
+1. ~~Confirm the keyword~~ — **DONE**, recorded as binding decision **D-011**.
+2. **Write the recording protocol** (Phase 0.3): prompts, session structure, consent form,
+   accept/reject quality bar, and the `session.json` schema in §15.2.
+3. **Run ONE pilot session** and measure it with `tools/audio_probe.py` and
+   `tools/audio_probe_bands.py` **before recruiting any speaker.** A format, level or
+   centring fault found in a pilot costs one session; found after recruitment it costs all of
+   them.
 
 ---
 

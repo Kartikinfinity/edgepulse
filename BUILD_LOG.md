@@ -303,8 +303,8 @@ the pin map.
 ---
 
 ## EXP-001 — Custom wake keyword selection (research)
-**Date:** 2026-09-09 · **Phase:** dataset-first Phase 0.1 · **Status:** PASS (recommendation
-delivered; **not yet a binding decision**)
+**Date:** 2026-09-09 · **Phase:** dataset-first Phase 0.1 · **Status:** **PASS — `Takshila`
+CONFIRMED by the user 2026-09-09 and recorded as binding decision D-011**
 
 **Objective.** Determine, scientifically rather than aesthetically, the optimal custom wake
 keyword for this product, and specify the dataset that must follow from it. Nothing trained,
@@ -369,6 +369,12 @@ prior build measured a **26.6×** inference penalty for enlarging that input `[p
   could promote Sanjika or Chatika. The top group is close and the argument, not the arithmetic,
   is what should be scrutinised.
 
-**Next.** User confirms or rejects `Takshila`. On confirmation, D-011 becomes binding and Phase
-0.2 begins: the recording protocol and a single pilot session, measured with
-`tools/audio_probe.py` and `tools/audio_probe_bands.py`, before any speaker is recruited.
+**Outcome.** The user confirmed **`Takshila`** on 2026-09-09. **D-011 is now binding**, and the
+keyword is propagated through `CLAUDE.md`, `DATASET.md`, `STATUS.md` (B-5 resolved),
+`PROJECT_STATE.md`, `CURRENT_HANDOFF.md`, `EXPERIMENT_STATE.md` and `README.md`.
+
+**Next — EXP-002.** Write the recording protocol (prompts, session structure, consent, the
+accept/reject quality bar, the `session.json` schema) and run **one pilot session**, measured
+with `tools/audio_probe.py` and `tools/audio_probe_bands.py`, **before recruiting any speaker.**
+The data specification is already fixed in `KEYWORD_SELECTION.md` §§13–15 and is an input, not
+something to redesign.

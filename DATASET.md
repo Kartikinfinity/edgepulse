@@ -5,12 +5,12 @@ DATASET STATUS:
     NOT YET CREATED
 
 KEYWORD:
-    RECOMMENDED "Takshila" - research complete, awaiting confirmation
-    (KEYWORD_SELECTION.md, DECISIONS.md D-011 proposed)
+    "Takshila"  /takshiila/  "tuk-SHEE-laa"  - CONFIRMED, binding
+    (KEYWORD_SELECTION.md, DECISIONS.md D-011)
 
 NEXT OBJECTIVE:
-    Confirm the keyword, then write the recording protocol and run one
-    pilot session before recruiting speakers.
+    Write the recording protocol, then run ONE pilot session and measure it
+    before recruiting any speaker.
 ```
 
 **Last updated:** 2026-09-09 · **Status:** reset · See `DATASET_RESET_AUDIT.md` for the audit
@@ -20,14 +20,14 @@ that produced this state and `DECISIONS.md` **D-010** for the decision.
 
 ## 1. Current state
 
-There is **no approved dataset for this project**. Keyword selection was reopened by the reset
-and the research is now **complete**: `KEYWORD_SELECTION.md` recommends **`Takshila`**, awaiting
-your confirmation before it becomes binding (D-011).
+There is **no approved dataset for this project**. The keyword, however, is now **settled**:
+**`Takshila`** /t̪əkˈʃiː.laː/, confirmed and binding (`DECISIONS.md` **D-011**, research in
+`KEYWORD_SELECTION.md`).
 
 | Item | State |
 |---|---|
 | Approved dataset | ❌ none |
-| Selected keyword | 🟡 **`Takshila` recommended**, awaiting confirmation |
+| Selected keyword | ✅ **`Takshila`** — confirmed, binding |
 | Raw recordings | ❌ none collected |
 | Feature caches | ❌ none |
 | Trained model | ❌ none, in this project or any predecessor still in scope |
@@ -106,11 +106,11 @@ Removed with the reset, recoverable from git history at commit `2c4500c` if ever
 
 In order. **None of it has started, and none of it may be skipped.**
 
-1. ~~**Keyword selection.**~~ **DONE** — `KEYWORD_SELECTION.md` delivers 18 candidates, a
-   weighted 20-criterion matrix, phonetic analysis, hard-negative derivation, an ISRO/SIH
-   contextual analysis, an ESP32/WakeNet suitability analysis and a licence audit.
-   **Recommendation: `Takshila`**, pending confirmation (D-011 proposed).
-   Full data specification is in `KEYWORD_SELECTION.md` §§13–15.
+1. ~~**Keyword selection.**~~ ✅ **DONE — `Takshila` confirmed (D-011).**
+   `KEYWORD_SELECTION.md` holds the 18 candidates, the weighted 20-criterion matrix, the
+   phonetic and hard-negative analysis, the ISRO/SIH and ESP32/WakeNet analyses, and the
+   licence audit. **The full data specification is §§13–15 of that document** — treat it as
+   the input to step 2, not as something to redo.
 2. **Dataset design specification**, written *before* any recording: target speaker count,
    utterances per speaker, environments, distances, positional-offset strategy, hard-negative
    word list, background sources, split policy (speaker-disjoint), and the licence position

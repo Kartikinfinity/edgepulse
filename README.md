@@ -3,8 +3,9 @@
 Custom keyword spotting on an **ESP32-S3-WROOM-1-N16R8** with an **INMP441** I²S MEMS
 microphone, streaming to a remote ASR server after detection.
 
-> **Status: dataset-first restart.** The previously supplied corpus was deprecated and
-> removed. **No keyword is selected and no dataset exists yet** — see `DATASET.md`.
+> **Status: dataset-first restart.** Wake keyword **`Takshila`** /t̪əkˈʃiː.laː/ is confirmed
+> ([`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md), D-011). The previously supplied corpus was
+> deprecated and removed; **the new dataset does not exist yet** — see [`DATASET.md`](DATASET.md).
 
 ```
 INMP441 → I2S/DMA → ring buffer → VAD → MFCC → int8 DS-CNN (TFLM + ESP-NN)
@@ -45,8 +46,9 @@ assumes a drive letter — see [`config/paths.py`](config/paths.py).
 retained. There is no dataset, no keyword, no implementation code, and nothing has been
 measured on hardware in this repository.**
 
-Next task: **keyword selection, then dataset design** — [`DATASET.md`](DATASET.md) §5.
-Open blockers: **B-5** no keyword · **B-6** no dataset · **B-1** pin map · **B-3** Wi-Fi.
+Next task: **recording protocol, then one measured pilot session** — the full data
+specification is [`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md) §§13–15.
+Open blockers: **B-6** no dataset · **B-1** pin map · **B-3** Wi-Fi. (B-5 keyword: resolved.)
 Live detail in [`STATUS.md`](STATUS.md).
 
 ## Documents
@@ -60,6 +62,7 @@ Live detail in [`STATUS.md`](STATUS.md).
 | [`BUILD_PLAN.md`](BUILD_PLAN.md) | Phases A–I with per-phase exit bars |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design and every justified deviation |
 | [`DATASET.md`](DATASET.md) | **Dataset status (NOT YET CREATED) and the plan to build one** |
+| [`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md) | **Keyword research + full dataset specification** |
 | [`DATASET_RESET_AUDIT.md`](DATASET_RESET_AUDIT.md) | Audit behind the dataset reset |
 | [`GIT_HISTORY_DATASET_PURGE.md`](GIT_HISTORY_DATASET_PURGE.md) | Why no history rewrite is needed |
 | [`HARDWARE.md`](HARDWARE.md) | Board, microphone, GPIO constraints, toolchain |

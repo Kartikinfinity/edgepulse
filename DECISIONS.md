@@ -307,13 +307,16 @@ decision records the instruction and its consequences rather than arguing for it
 
 ---
 
-## D-011 — Custom wake keyword: `Takshila` **(PROPOSED — not yet binding)**
+## D-011 — Custom wake keyword: **`Takshila`** — CONFIRMED
 
-**Date:** 2026-09-09 · **Status:** **proposed, awaiting user confirmation** · Supersedes the
-void D-002 · Full research: `KEYWORD_SELECTION.md`
+**Date:** 2026-09-09 · **Status:** **ACTIVE — confirmed by the user** · **Decided by:** the user,
+on the research in `KEYWORD_SELECTION.md` · Supersedes the void D-002
 
-**Proposed decision.** The custom wake keyword is **`Takshila`**, /t̪əkˈʃiː.laː/ —
+**Decision.** The custom wake keyword is **`Takshila`**, /t̪əkˈʃiː.laː/ ("tuk-SHEE-laa") —
 3 syllables, 7 phonemes, structure CVC·CV·CV.
+
+**This is now binding.** The dataset, the hard-negative set, the recording prompts and the
+product identity are all built on it. Changing it later invalidates every recording made.
 
 **Why, in one paragraph.** It clears every published structural threshold (7 phonemes against
 Picovoice's 6-phoneme floor; 3 syllables inside both Picovoice's 2–4 and Espressif's 3–6), and
@@ -336,7 +339,7 @@ fits the existing 1.0 s / 49×13 input with no architecture change.
   person across the room is an uncontrolled trigger source. This is what ranks `Chetaki`
   (*Chetan*), `Sanjika` (*Sanjay/Sanjana*), `Kalpana` and `Sanketa` below the recommendation.
 
-**Consequences if confirmed.**
+**Consequences.**
 - One word, not two: a carrier phrase would exceed the 1.0 s window and force a larger input,
   which the prior build measured at a **26.6×** inference penalty `[prior-build]`.
 - The hard-negative set is defined by the **क्ष family** (*shiksha*, *raksha*, *lakshya*) and the

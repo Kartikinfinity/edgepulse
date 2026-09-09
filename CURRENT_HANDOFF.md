@@ -31,11 +31,11 @@ python scripts/health_check.py        # shows phase progress and blockers
 # 6. then start the exact next task named below. Nothing before it.
 ```
 
-**The exact next task is keyword selection, then dataset design** —
-`DATASET.md` §5, `BUILD_PLAN.md` Phase 0.
+**The exact next task is the recording protocol, then ONE measured pilot session.**
 
-Define the selection criteria *before* choosing the keyword, and write the dataset
-specification *before* recording anything. Hardware bring-up (Phase A) is
+The keyword is settled (**`Takshila`**, D-011) and the full data specification already
+exists in `KEYWORD_SELECTION.md` §§13–15 — **use it, do not redesign it**. Run and measure
+a single pilot session before recruiting any speaker. Hardware bring-up (Phase A) is
 dataset-independent and may run in parallel once the pin map arrives.
 
 **Do not train anything before the streaming evaluation harness exists.** The reason is in
@@ -49,7 +49,7 @@ dataset-independent and may run in parallel once the pin map arrives.
 |---|---|
 | Discovery: source documents, prior build, hardware, toolchain | ✅ done |
 | **Dataset** | ❌ **RESET — deprecated and removed (D-010). None exists.** |
-| **Keyword** | ❌ **selection reopened; no incumbent** |
+| **Keyword** | **`Takshila` /t̪əkˈʃiː.laː/ — CONFIRMED (D-011)** |
 | Architecture design + 8 justified deviations | ✅ done, in `ARCHITECTURE.md` |
 | Build plan with per-phase exit bars | ✅ done, in `BUILD_PLAN.md` |
 | Decisions recorded with reasoning | ✅ done, in `DECISIONS.md` (D-001…D-010) |
@@ -102,8 +102,9 @@ which derives the root from its own file location.
 
 ```
 DATASET STATUS: NOT YET CREATED
-NEXT OBJECTIVE: select the optimal custom keyword, then design and build the
-                project-specific KWS dataset from first principles.
+KEYWORD:        "Takshila" - CONFIRMED, binding (D-011)
+NEXT OBJECTIVE: recording protocol -> one measured pilot -> collection.
+                Full spec: KEYWORD_SELECTION.md 13-15.
 ```
 
 The previously supplied corpus was **deprecated and removed from the project**

@@ -15,6 +15,7 @@ and, more importantly, the honest statement of what is **still unmeasured**.
 | ID | Title | Type | Status | Record |
 |---|---|---|---|---|
 | EXP-000 | Discovery and project bootstrap | discovery | PASS — **dataset findings VOIDED by D-010** | `BUILD_LOG.md` |
+| **EXP-001** | **Custom wake keyword selection** | research | **PASS — `Takshila` confirmed (D-011)** | `BUILD_LOG.md` |
 | OPS-001 | Safe storage recovery + storage-strategy decision | operational | PASS | `BUILD_LOG.md` |
 | OPS-002 | Cross-machine portability and handoff preparation | operational | PASS | `BUILD_LOG.md` |
 | OPS-003 | Dataset reset and active-context purge | operational | PASS | `BUILD_LOG.md` |
@@ -53,7 +54,7 @@ Nothing below has a number in this repository. Do not quote one.
 
 | Area | Status |
 |---|---|
-| **Keyword selection criteria and choice** | ❌ not started — the current task |
+| Keyword selection | **done — `Takshila`, EXP-001 / D-011** |
 | **Dataset: any statistic at all** | ❌ no dataset exists |
 | Board identity verified on *this* board (chip rev, flash, PSRAM, heap) | ❌ not measured — task **A4** |
 | Actual I²S sample rate | ❌ not measured — task **A5** |
@@ -122,8 +123,8 @@ A figure swept and judged on the same audio is **provisional**, never a result.
 
 | Next | Depends on |
 |---|---|
-| **EXP-001** — keyword selection: criteria defined, candidates evaluated, choice recorded | nothing — **can start now** |
-| **EXP-002** — dataset design specification | EXP-001 |
-| **EXP-003** — recording protocol trial: one pilot session, measured with `tools/audio_probe*.py` | EXP-002 |
+| ~~EXP-001 — keyword selection~~ | **PASS — `Takshila` (D-011)** |
+| **EXP-002** — recording protocol + ONE pilot session, measured with `tools/audio_probe*.py` | nothing — **can start now** |
+| **EXP-003** — full collection against `KEYWORD_SELECTION.md` §14 | EXP-002 |
 | **EXP-004** — validate the authoritative pin map against `HARDWARE.md` §3 | **blocked: pin map (B-1)** |
 | **EXP-005** — board identity readout (A4) | board attached |

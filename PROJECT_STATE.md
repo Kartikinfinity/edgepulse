@@ -16,9 +16,9 @@ Snapshot date: **2026-09-09** · Regenerate the live view with
 | Competition | Smart India Hackathon 2026 |
 | Problem statement | **PS 26172** — *Low Latency and Efficient Voice Activator for Edge Devices* |
 | Organisation | ISRO / Department of Space |
-| Keyword | **NOT SELECTED** — selection reopened by D-010 |
+| Keyword | **`Takshila`** /t̪kˈʃiː.laː/ — confirmed, binding (D-011) |
 | Target hardware | ESP32-S3-WROOM-1-N16R8 + INMP441 I²S MEMS microphone |
-| Build phase | **Dataset-first restart** — no approved dataset, no keyword |
+| Build phase | **Dataset-first restart** — keyword settled; no dataset yet |
 | Explicitly out of scope this phase | <256 KB RAM, <10 % idle CPU (measured and displayed, **not** optimised for) |
 
 ## 2. Repository inventory
@@ -40,7 +40,8 @@ Snapshot date: **2026-09-09** · Regenerate the live view with
 | `HARDWARE.md` | Board, microphone, GPIO constraints, host, toolchain |
 | `ENVIRONMENT_SETUP.md` | Windows + Linux machine setup |
 | `EXPERIMENT_STATE.md` | Experiment ledger — what has been measured and what has not |
-| `DECISIONS.md` | D-001…D-010, irreversible decisions with reasoning |
+| `DECISIONS.md` | D-001…D-011, irreversible decisions with reasoning |
+| `KEYWORD_SELECTION.md` | **Keyword research + the full dataset specification (§§13–15)** |
 | `BUILD_LOG.md` | Append-only log with pre-declared pass bars |
 | `STORAGE_AUDIT.md` | Historical record of the original machine's storage work |
 
@@ -100,7 +101,7 @@ hardware measurements taken in this tree.**
 
 | Phase | Description | State |
 |---|---|---|
-| **0.1** | **Keyword selection** | 🔴 **not started — the current task** |
+| **0.1** | **Keyword selection** | DONE — **`Takshila` (D-011)** |
 | **0.2–0.5** | **Dataset design, protocol, collection, build** | 🔴 **not started; blocks B–F** |
 | A1 | Python venv | ⚪ scripted, not yet run on the target machine |
 | A2 | PlatformIO skeleton | 🟡 `platformio.ini` committed; no `src/` yet |
@@ -122,7 +123,7 @@ Phase A (hardware bring-up) and Phase H (UI, simulator-driven) are the only phas
 
 | # | Blocker | Blocks |
 |---|---|---|
-| **B-5** | **No keyword selected** — reopened by D-010 | Phase 0.2 onward, therefore everything |
+| B-5 | resolved — keyword `Takshila` confirmed (D-011) | — |
 | **B-6** | **No approved dataset** | B, C, D, E, F, I |
 | **B-1** | Authoritative INMP441 → ESP32-S3 pin map not supplied | A3 → A4–A6, F, I |
 | **B-3** | 2.4 GHz Wi-Fi SSID + password | G3 onward |
@@ -131,12 +132,11 @@ Phase A (hardware bring-up) and Phase H (UI, simulator-driven) are the only phas
 
 ## 7. Open TODOs
 
-1. **Define keyword-selection criteria, then select the keyword** (Phase 0.1). Record it as a
-   decision. Nothing downstream can start first.
-2. **Write the dataset design specification** — speakers, utterances, environments, distances,
-   positional offsets, hard negatives, backgrounds, split policy, licences (Phase 0.2).
-3. **Write the recording protocol and run one pilot session**, measured with
-   `tools/audio_probe.py` and `tools/audio_probe_bands.py` (Phase 0.3).
+1. ~~Keyword selection~~ **DONE** — **`Takshila`** (D-011).
+2. ~~Dataset design specification~~ **DONE** — `KEYWORD_SELECTION.md` §§13–15.
+3. **Write the recording protocol and run ONE pilot session**, measured with
+   `tools/audio_probe.py` and `tools/audio_probe_bands.py`, **before recruiting speakers**
+   (Phase 0.3). This is the current task.
 4. In parallel, dataset-independent: `scripts/setup.*` (A1) and `firmware/src/main.cpp` so
    `pio run` produces a binary (A2).
 5. Obtain the pin map (B-1) and the Wi-Fi credentials (B-3) from the user.
