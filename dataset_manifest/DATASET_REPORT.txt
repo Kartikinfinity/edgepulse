@@ -1,78 +1,78 @@
 ==============================================================================
 DATASET QA REPORT — Takshila demo dataset
 ==============================================================================
-clips              20,804
-total duration     5.78 h  (every clip exactly 1.000 s)
-build time         10.9 min
+clips              20,915
+total duration     5.81 h  (every clip exactly 1.000 s)
+build time         10.2 min
 
 --- CLASS BALANCE ---
-  speech_negative      7,980   38.4%
-  near_homophone       4,161   20.0%
-  positive             3,718   17.9%
+  speech_negative      7,980   38.2%
+  near_homophone       4,161   19.9%
+  positive             3,793   18.1%
   background           2,400   11.5%
-  hard_negative        1,845    8.9%
-  silence                700    3.4%
+  hard_negative        1,881    9.0%
+  silence                700    3.3%
 
 --- MODEL TARGET (3-way training label) ---
-  unknown             13,986   67.2%
-  keyword              3,718   17.9%
-  background           3,100   14.9%
-  positive : negative ratio = 1 : 4.6
+  unknown             14,022   67.0%
+  keyword              3,793   18.1%
+  background           3,100   14.8%
+  positive : negative ratio = 1 : 4.5
 
 --- SPLITS ---
-  train         16,829   80.9%   speech_negative=6247 near_homophone=3178 positive=3104 background=2400 hard_negative=1550 silence=350
-  validation     2,936   14.1%   speech_negative=1124 near_homophone=609 positive=572 silence=350 hard_negative=281
+  train         16,920   80.9%   speech_negative=6247 near_homophone=3178 positive=3169 background=2400 hard_negative=1576 silence=350
+  validation     2,956   14.1%   speech_negative=1124 near_homophone=609 positive=582 silence=350 hard_negative=291
   test           1,039    5.0%   speech_negative=609 near_homophone=374 positive=42 hard_negative=14
 
 --- REAL vs SYNTHETIC ---
-  synthetic            9,612   46.2%
-  real                11,192   53.8%
+  synthetic            9,715   46.4%
+  real                11,200   53.6%
     public            10,380
-    tts                7,795
-    tts_partial        1,817
-    real_device          812
+    tts                7,864
+    tts_partial        1,851
+    real_device          820
 
-  REAL positives (INMP441): 84  <-- the only honest detection evidence
+  REAL positives (INMP441): 90  <-- the only honest detection evidence
 
 --- VOICE / SPEAKER DIVERSITY ---
-  distinct voice_ids           3,155
-  distinct voices on POSITIVES 777
+  distinct voice_ids           3,163
+  distinct voices on POSITIVES 808
   distinct human speaker_ids   2,171
   NOTE: TTS voices are not speakers. No speaker-independence claim is possible.
 
 --- SOURCES & LICENCES ---
   google_speech_commands_v0.02           CC BY 4.0                           10,380
-  own_inmp441                            project-owned                          812
-  piper:en_GB-vctk-medium                MIT (voice model); GPL-3.0 (engine)   2,105
-  piper:en_US-arctic-medium              MIT (voice model); GPL-3.0 (engine)   1,467
-  piper:en_US-l2arctic-medium            MIT (voice model); GPL-3.0 (engine)   2,435
-  piper:en_US-libritts_r-medium          MIT (voice model); GPL-3.0 (engine)   2,334
-  piper:hi_IN-pratham-medium             MIT (voice model); GPL-3.0 (engine)     321
-  piper:hi_IN-priyamvada-medium          MIT (voice model); GPL-3.0 (engine)     291
-  piper:hi_IN-rohan-medium               MIT (voice model); GPL-3.0 (engine)     162
-  piper:ml_IN-arjun-medium               MIT (voice model); GPL-3.0 (engine)      81
-  piper:mr_IN-google-medium              MIT (voice model); GPL-3.0 (engine)     386
+  own_inmp441                            project-owned                          820
+  piper:en_GB-vctk-medium                MIT (voice model); GPL-3.0 (engine)   2,135
+  piper:en_US-arctic-medium              MIT (voice model); GPL-3.0 (engine)   1,468
+  piper:en_US-l2arctic-medium            MIT (voice model); GPL-3.0 (engine)   2,418
+  piper:en_US-libritts_r-medium          MIT (voice model); GPL-3.0 (engine)   2,400
+  piper:hi_IN-pratham-medium             MIT (voice model); GPL-3.0 (engine)     318
+  piper:hi_IN-priyamvada-medium          MIT (voice model); GPL-3.0 (engine)     298
+  piper:hi_IN-rohan-medium               MIT (voice model); GPL-3.0 (engine)     173
+  piper:ml_IN-arjun-medium               MIT (voice model); GPL-3.0 (engine)      79
+  piper:mr_IN-google-medium              MIT (voice model); GPL-3.0 (engine)     396
   piper:te_IN-maya-medium                MIT (voice model); GPL-3.0 (engine)      30
 
 --- AUGMENTATION ---
-  mic_band+gain+noise            8,306   39.9%
-  mic_band+noise                 5,662   27.2%
-  mic_band                       2,950   14.2%
-  mic_band+gain                  2,802   13.5%
-  mic_band+speed1.007+gain+noise       9    0.0%
+  mic_band+gain+noise            8,338   39.9%
+  mic_band+noise                 5,673   27.1%
+  mic_band                       2,983   14.3%
+  mic_band+gain                  2,831   13.5%
+  mic_band+speed1.007+gain+noise       7    0.0%
   mic_band+speed0.947+gain+noise       7    0.0%
+  mic_band+speed0.952+gain+noise       7    0.0%
   mic_band+speed1.066+noise          7    0.0%
-  mic_band+speed1.013+gain+noise       7    0.0%
-  mic_band+speed1.062+gain+noise       7    0.0%
-  mic_band+speed0.952+gain+noise       6    0.0%
+  mic_band+speed0.991+gain+noise       7    0.0%
+  mic_band+speed0.975+gain+noise       7    0.0%
 
 --- LEVEL / SNR DISTRIBUTION ---
-  RMS dBFS               min   -59.1  p25   -31.8  med   -25.5  p75   -21.8  max    -3.9   n=20,804
-  measured SNR dB        min     0.9  p25    20.6  med    27.9  p75    34.7  max    90.0   n=18,976
-  mixed-in SNR dB        min     3.3  p25    13.0  med    17.3  p75    21.0  max    29.9   n=14,775
+  RMS dBFS               min   -59.1  p25   -31.8  med   -25.6  p75   -21.8  max    -3.9   n=20,915
+  measured SNR dB        min     0.9  p25    20.6  med    27.9  p75    34.6  max    90.0   n=19,016
+  mixed-in SNR dB        min     3.3  p25    13.0  med    17.3  p75    21.0  max    29.9   n=14,828
 
 --- KEYWORD POSITION (positives) ---
-  onset ms   min 60  med 128  max 527   n=3,718
+  onset ms   min 60  med 128  max 527   n=3,793
   Spread is intentional: a centred corpus trains a model that fails on
   sliding windows. Offset sampling applies to every split.
 

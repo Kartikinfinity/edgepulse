@@ -387,6 +387,7 @@ def gen_real_positives(rows: list, noise_pool: dict, log) -> tuple[int, int]:
         log("  no real keyword recordings found")
         return 0, 0
     kept = rejected = 0
+    usable_per_session: dict[str, int] = {}
     for f in files:
         try:
             x, sr = read_wav(f)
@@ -414,8 +415,17 @@ def gen_real_positives(rows: list, noise_pool: dict, log) -> tuple[int, int]:
             if w is None or w.size > CLIP_SAMPLES - 2 * MARGIN:
                 rejected += 1
                 continue
-        # session-disjoint substitute for speaker-disjoint: alternate by file
-        # so both validation and test contain real keyword audio.
+        # Split real audio between validation and test.
+        #
+        # SESSION-disjoint would be the right control (docs/DATASET_RESEARCH.md 9)
+        # and the code below prefers it, but it only applies when every session
+        # yields enough usable takes. Right now session S_PILOT_02 contributes 1
+        # usable take of 30 - the rest captured room tone - so a session-disjoint
+        # test set would hold a single utterance. We therefore alternate WITHIN
+        # sessions and record session_id so the report can state plainly that
+        # session overfitting is NOT controlled for.
+        session = f.parent.name
+        usable_per_session[session] = usable_per_session.get(session, 0) + 1
         split = REAL_AUDIO_SPLITS[kept % len(REAL_AUDIO_SPLITS)]
         for k in range(6):        # offset sampling: the real inference distribution
             r = rng_for("realpos", f.stem, k)
@@ -427,7 +437,8 @@ def gen_real_positives(rows: list, noise_pool: dict, log) -> tuple[int, int]:
                 voice_id="SPK_PILOT_01", synthetic="false", mic="inmp441",
                 corpus="own_inmp441", lic="project-owned", text="Takshila",
                 clip=clip, onset=on / SR * 1000, offset=off / SR * 1000, cov=1.0,
-                rate="", ameta=ameta, seed=seed_of("realpos", f.stem, k),
+                rate=f"session:{session}", ameta=ameta,
+                seed=seed_of("realpos", f.stem, k),
             ))
         # partial-keyword windows from real audio - the most realistic negatives
         for k in range(2):
@@ -443,6 +454,13 @@ def gen_real_positives(rows: list, noise_pool: dict, log) -> tuple[int, int]:
                 ameta=ameta, seed=seed_of("realpart", f.stem, k),
             ))
         kept += 1
+    if usable_per_session:
+        log("      usable takes per session: " +
+            ", ".join(f"{k}={v}" for k, v in sorted(usable_per_session.items())))
+        if len(usable_per_session) > 1 and min(usable_per_session.values()) < 5:
+            log("      NOTE: one session contributed too few usable takes for a")
+            log("            session-disjoint split; alternating within sessions.")
+            log("            Session overfitting is NOT controlled for.")
     return kept, rejected
 
 

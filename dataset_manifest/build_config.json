@@ -26,7 +26,7 @@
   ],
   "distinct_tts_voices": 1069,
   "speech_commands_present": true,
-  "clips": 20804,
+  "clips": 20915,
   "leakage_pass": true,
-  "build_seconds": 655.1
+  "build_seconds": 614.2
 }

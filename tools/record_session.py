@@ -196,6 +196,36 @@ def record(ser: serial.Serial, duration_ms: int) -> tuple[bytearray, dict]:
     return pcm, stats
 
 
+def speech_check(pcm: bytes) -> tuple[bool, float, float]:
+    """Did anyone actually SPEAK in this take?
+
+    Transport integrity ("80000/80000 samples, 0 lost") says nothing about
+    whether the microphone heard a voice. 30 takes were once recorded back to
+    back and every one reported [ok] while containing only room tone - the
+    speech-band level was -44.7 dBFS against a known silence floor of -44.6.
+    This check exists so that can never happen silently again.
+
+    Returns (has_speech, speech_band_dbfs, band_snr_db).
+    """
+    try:
+        import numpy as np
+        from scipy import signal
+    except ImportError:
+        return True, float("nan"), float("nan")      # cannot check; do not block
+    x = np.frombuffer(pcm, dtype="<i2").astype(np.float64) / 32768.0
+    if x.size < 3200:
+        return False, float("nan"), float("nan")
+    sos = signal.butter(4, [300 / 8000, 3400 / 8000], btype="band", output="sos")
+    b = signal.sosfilt(sos, x)
+    band_db = 20 * np.log10(np.sqrt((b ** 2).mean()) + 1e-12)
+    fr = 160
+    n = b.size // fr
+    e = 10 * np.log10((b[:n * fr].reshape(n, fr) ** 2).mean(axis=1) + 1e-12)
+    snr = float(e.max() - np.percentile(e, 20))
+    # A real utterance shows a loud/quiet contrast; room tone is flat.
+    return (snr >= 10.0), float(band_db), snr
+
+
 def write_wav(path: Path, pcm: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(path), "wb") as w:
@@ -225,6 +255,11 @@ def main() -> int:
     ap.add_argument("--rate-label", default="normal", dest="rate_label")
     ap.add_argument("--environment", default="E1")
     ap.add_argument("--notes", default="")
+    ap.add_argument("--no-prompt", action="store_true",
+                    help="skip the 3-2-1 countdown (for ambient/unattended capture)")
+    ap.add_argument("--expect-speech", action="store_true", default=None,
+                    help="fail a take that contains no speech (default: on unless "
+                         "the label looks like silence/ambient)")
     args = ap.parse_args()
 
     port = find_port(args.port)
@@ -253,6 +288,14 @@ def main() -> int:
         ser.close()
         return 0
 
+    # Ambient/silence captures legitimately contain no speech.
+    if args.expect_speech is None:
+        args.expect_speech = not any(t in args.record.lower()
+                                     for t in ("silence", "ambient", "noise", "roomtone"))
+    if not args.expect_speech:
+        args.no_prompt = True
+    n_no_speech = 0
+
     session = args.session or datetime.now().strftime("S%Y%m%d_%H%M%S")
     outdir = RECORDINGS_ROOT / args.speaker / session
     started = datetime.now(timezone.utc).isoformat()
@@ -261,7 +304,14 @@ def main() -> int:
     for i in range(1, args.repeat + 1):
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         base = f"{args.speaker}_{session}_{args.record}_{i:03d}_{stamp}"
-        print(f"[{i}/{args.repeat}] recording {args.duration} ms -> {base}.wav")
+        if not args.no_prompt:
+            print(f"\n[{i}/{args.repeat}] get ready...", end="", flush=True)
+            for c in (3, 2, 1):
+                print(f" {c}", end="", flush=True)
+                time.sleep(0.7)
+            print("  >>> SPEAK NOW <<<", flush=True)
+        else:
+            print(f"[{i}/{args.repeat}] recording {args.duration} ms -> {base}.wav")
         try:
             pcm, stats = record(ser, args.duration)
         except RuntimeError as exc:
@@ -297,6 +347,14 @@ def main() -> int:
 
         got, exp = stats.get("samples", 0), expected
         drift = 100.0 * (got - exp) / exp if exp else 0.0
+        has_speech, band_db, snr = speech_check(bytes(pcm))
+        meta["capture_stats"]["speech_band_dbfs"] = round(band_db, 1) if band_db == band_db else None
+        meta["capture_stats"]["speech_band_snr_db"] = round(snr, 1) if snr == snr else None
+        meta["capture_stats"]["has_speech"] = bool(has_speech)
+        (outdir / f"{base}.json").write_text(
+            json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+
+
         flag = "ok"
         if stats["lost_blocks"] or stats["overrun_blocks"]:
             flag = "DROPOUTS"
@@ -304,8 +362,14 @@ def main() -> int:
         elif abs(drift) > 1.0:
             flag = "LENGTH"
             rc = 1
-        print(f"  {got}/{exp} samples ({drift:+.2f}%)  blocks={stats['blocks']} "
-              f"lost={stats['lost_blocks']} overrun={stats['overrun_blocks']}  [{flag}]")
+        elif not has_speech and args.expect_speech:
+            flag = "NO SPEECH DETECTED"
+            rc = 1
+            n_no_speech += 1
+        print(f"  {got}/{exp} samples ({drift:+.2f}%)  lost={stats['lost_blocks']} "
+              f"overrun={stats['overrun_blocks']}  speech={snr:.1f} dB SNR  [{flag}]")
+        if flag == "NO SPEECH DETECTED":
+            print("        ^ this take holds room tone, not a voice. Re-record it.")
 
     ser.close()
     print(f"\nwrote to {outdir}")

@@ -45,7 +45,10 @@ PARTIAL_COVERAGE = (0.25, 0.85)
 VOICES_DIR = PROJECT_ROOT / "data" / "tts_voices"
 CACHE_DIR = PROJECT_ROOT / "data" / "factory_cache"
 OUT_DIR = DATASET_ROOT                     # data/dataset
-PILOT_DIR = RECORDINGS_ROOT / "PILOT"
+# Scan EVERY recording session, not one hard-coded folder. The 30 takes of
+# session S_PILOT_02 landed under a different speaker directory and were
+# silently invisible to the factory until this was generalised.
+PILOT_DIR = RECORDINGS_ROOT
 
 # External corpora. Absent sources are skipped with a warning, never faked.
 SPEECH_COMMANDS = Path(r"D:\speech_commands\data")
