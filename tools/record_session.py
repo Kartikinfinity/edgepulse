@@ -196,34 +196,105 @@ def record(ser: serial.Serial, duration_ms: int) -> tuple[bytearray, dict]:
     return pcm, stats
 
 
-def speech_check(pcm: bytes) -> tuple[bool, float, float]:
-    """Did anyone actually SPEAK in this take?
+# Speech-band peak that separates the session that worked from the one that
+# did not: S_PILOT measured -25.3 dB median (14/17 usable), S_PILOT_03
+# measured -34.2 dB (3/15 usable). -30 dB sits between them.
+LEVEL_TARGET_DB = -30.0
+
+
+def speech_check(pcm: bytes) -> dict:
+    """Would the DATASET FACTORY accept this take?
 
     Transport integrity ("80000/80000 samples, 0 lost") says nothing about
     whether the microphone heard a voice. 30 takes were once recorded back to
     back and every one reported [ok] while containing only room tone - the
     speech-band level was -44.7 dBFS against a known silence floor of -44.6.
-    This check exists so that can never happen silently again.
 
-    Returns (has_speech, speech_band_dbfs, band_snr_db).
+    A second, subtler failure followed: a laxer "SNR >= 10 dB" rule here passed
+    11 of 15 takes that the factory then rejected 12 of, because the speech band
+    sat 9 dB quieter than the session that worked. Two different definitions of
+    "usable" meant the operator got told "ok" and lost the session anyway.
+
+    So this asks the factory itself, using the factory's own span rule and
+    bounds. There is one definition of usable, and the microphone stand-in for
+    it lives here.
+
+    Returns a dict; `usable` is the verdict, `reason` is what to change.
     """
+    out = {"usable": None, "reason": "not checked", "band_dbfs": float("nan"),
+           "band_peak_db": float("nan"), "snr_db": float("nan"),
+           "span_ms": float("nan"), "truncated": False}
     try:
         import numpy as np
         from scipy import signal
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from tools.dataset_factory.audio import (_speech_envelope_db, extract_keyword,
+                                                 speech_span_ms)
+        from tools.dataset_factory.config import (CLIP_SAMPLES, MAX_KEYWORD_MS,
+                                                  MIN_KEYWORD_MS)
     except ImportError:
-        return True, float("nan"), float("nan")      # cannot check; do not block
+        out["reason"] = "numpy/scipy unavailable - cannot check"
+        out["usable"] = True                      # cannot check; do not block
+        return out
+
     x = np.frombuffer(pcm, dtype="<i2").astype(np.float64) / 32768.0
     if x.size < 3200:
-        return False, float("nan"), float("nan")
+        out.update(usable=False, reason="take too short to assess")
+        return out
+
     sos = signal.butter(4, [300 / 8000, 3400 / 8000], btype="band", output="sos")
     b = signal.sosfilt(sos, x)
-    band_db = 20 * np.log10(np.sqrt((b ** 2).mean()) + 1e-12)
-    fr = 160
-    n = b.size // fr
-    e = 10 * np.log10((b[:n * fr].reshape(n, fr) ** 2).mean(axis=1) + 1e-12)
-    snr = float(e.max() - np.percentile(e, 20))
-    # A real utterance shows a loud/quiet contrast; room tone is flat.
-    return (snr >= 10.0), float(band_db), snr
+    out["band_dbfs"] = float(20 * np.log10(np.sqrt((b ** 2).mean()) + 1e-12))
+
+    edb = _speech_envelope_db(x, SAMPLE_RATE)
+    if edb.size == 0:
+        out.update(usable=False, reason="take too short to assess")
+        return out
+    floor = float(np.percentile(edb, 20))
+    peak = float(edb.max())
+    out["band_peak_db"], out["snr_db"] = peak, peak - floor
+    out["span_ms"] = float(speech_span_ms(x, SAMPLE_RATE))
+
+    # Did the word run off the end of the window? Four takes in S_PILOT_03 did:
+    # speech was still above threshold in the final 10 ms frame.
+    thr = floor + max(8.0, (peak - floor) * 0.35)
+    over = np.flatnonzero(edb > thr)
+    if over.size:
+        out["truncated"] = bool((edb.size - 1 - over[-1]) * 0.010 < 0.10)
+
+    # THE VERDICT IS THE FACTORY'S, NOT A SECOND OPINION.
+    # Ask the real acceptance rule: a span inside the keyword duration bounds,
+    # and an extracted segment that fits the 1 s window with its margins. Being
+    # stricter here is not "safe" - it sends the operator away to re-record
+    # takes that were fine. Level and truncation are ADVICE layered on top.
+    seg = extract_keyword(x.astype(np.float32), SAMPLE_RATE)
+    fits = seg is not None and seg.size <= CLIP_SAMPLES - 2 * int(SAMPLE_RATE * 0.060)
+    in_range = MIN_KEYWORD_MS <= out["span_ms"] <= MAX_KEYWORD_MS
+    out["usable"] = bool(in_range and fits)
+
+    if out["usable"]:
+        out["reason"] = "usable"
+        if peak < LEVEL_TARGET_DB:                    # advisory, not a rejection
+            out["reason"] = (f"usable but quiet ({peak:.0f} dB, prefer "
+                             f"> {LEVEL_TARGET_DB:.0f}) - consider moving closer")
+    elif out["snr_db"] < 6.0:
+        out["reason"] = "NO SPEECH - room tone only"
+    elif out["truncated"]:
+        out["reason"] = "CUT OFF at the end - speak sooner after the countdown"
+    elif peak < LEVEL_TARGET_DB:
+        # The dominant failure in S_PILOT_02/03: at ~12 dB above the noise floor
+        # only the loudest syllable clears the span threshold, so one word
+        # measures as a 140 ms fragment. The cure is level, not enunciation.
+        out["reason"] = (f"TOO QUIET ({peak:.0f} dB, want > {LEVEL_TARGET_DB:.0f}) "
+                         f"- move closer to the mic")
+    elif out["span_ms"] < MIN_KEYWORD_MS:
+        out["reason"] = (f"word too short/broken ({out['span_ms']:.0f} ms, want "
+                         f"{MIN_KEYWORD_MS}-{MAX_KEYWORD_MS}) - say it fully")
+    elif out["span_ms"] > MAX_KEYWORD_MS:
+        out["reason"] = f"word too long ({out['span_ms']:.0f} ms) - one word only"
+    else:
+        out["reason"] = "does not fit the 1 s window"
+    return out
 
 
 def write_wav(path: Path, pcm: bytes) -> None:
@@ -347,13 +418,18 @@ def main() -> int:
 
         got, exp = stats.get("samples", 0), expected
         drift = 100.0 * (got - exp) / exp if exp else 0.0
-        has_speech, band_db, snr = speech_check(bytes(pcm))
-        meta["capture_stats"]["speech_band_dbfs"] = round(band_db, 1) if band_db == band_db else None
-        meta["capture_stats"]["speech_band_snr_db"] = round(snr, 1) if snr == snr else None
-        meta["capture_stats"]["has_speech"] = bool(has_speech)
+        chk = speech_check(bytes(pcm))
+        meta["capture_stats"].update({
+            "speech_band_dbfs": None if chk["band_dbfs"] != chk["band_dbfs"] else round(chk["band_dbfs"], 1),
+            "speech_band_peak_db": None if chk["band_peak_db"] != chk["band_peak_db"] else round(chk["band_peak_db"], 1),
+            "speech_band_snr_db": None if chk["snr_db"] != chk["snr_db"] else round(chk["snr_db"], 1),
+            "keyword_span_ms": None if chk["span_ms"] != chk["span_ms"] else round(chk["span_ms"]),
+            "truncated": chk["truncated"],
+            "factory_usable": chk["usable"],
+            "verdict": chk["reason"],
+        })
         (outdir / f"{base}.json").write_text(
             json.dumps(meta, indent=2) + "\n", encoding="utf-8")
-
 
         flag = "ok"
         if stats["lost_blocks"] or stats["overrun_blocks"]:
@@ -362,14 +438,15 @@ def main() -> int:
         elif abs(drift) > 1.0:
             flag = "LENGTH"
             rc = 1
-        elif not has_speech and args.expect_speech:
-            flag = "NO SPEECH DETECTED"
+        elif args.expect_speech and not chk["usable"]:
+            flag = chk["reason"]
             rc = 1
             n_no_speech += 1
         print(f"  {got}/{exp} samples ({drift:+.2f}%)  lost={stats['lost_blocks']} "
-              f"overrun={stats['overrun_blocks']}  speech={snr:.1f} dB SNR  [{flag}]")
-        if flag == "NO SPEECH DETECTED":
-            print("        ^ this take holds room tone, not a voice. Re-record it.")
+              f"overrun={stats['overrun_blocks']}  "
+              f"peak={chk['band_peak_db']:.0f} dB  span={chk['span_ms']:.0f} ms  [{flag}]")
+        if flag not in ("ok", "DROPOUTS", "LENGTH"):
+            print(f"        ^ REJECTED: {chk['reason']}. Re-record this take.")
 
     ser.close()
     print(f"\nwrote to {outdir}")
