@@ -1,0 +1,27 @@
+# Tooling configuration only.
+#
+# Runtime dependencies live in requirements*.txt so that pip, CI and the setup
+# scripts all read one authoritative list. This file exists to give pytest and
+# the linters a stable rootdir regardless of where the repo is cloned.
+
+[project]
+name = "sih-kws-solvani"
+version = "0.1.0"
+description = "SIH 2026 PS 26172 - low-latency edge keyword spotting for 'solvani' on ESP32-S3 with cloud ASR"
+requires-python = ">=3.10,<3.14"
+license = { text = "Proprietary - academic project" }
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests", "training", "tools"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = [".venv", "data", "artifacts", ".pio", "dataset_manifest"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]

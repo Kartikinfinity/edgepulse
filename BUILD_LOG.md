@@ -156,3 +156,71 @@ project's projected lifetime footprint.
 
 **Next.** Await the user's explicit instruction before resuming the SIH build. When resumed,
 the first unblocked step is unchanged: `BUILD_PLAN.md` A1–A2, then Phases B and C.
+
+---
+
+## OPS-002 — Cross-machine portability and handoff preparation
+**Date:** 2026-09-09 · **Phase:** environment (SIH implementation still halted by the user)
+**Status:** PASS
+
+**Objective.** Make the repository completely portable and reproducible on a second Windows or
+Linux machine, without losing project knowledge, decisions, experiments, architecture, dataset
+understanding or development state. The Git repository — not any chat transcript — becomes the
+sole source of truth.
+
+**Pre-declared pass bar.** (1) No tracked *code or instruction* contains an absolute path,
+drive letter or username; (2) every analysis script runs unchanged from an unrelated working
+directory; (3) a second machine can prove it holds byte-identical data without the WAVs being
+in Git; (4) setup, verification and health-check scripts exist and run; (5) no secret is
+committed; (6) the working tree is clean and committed.
+
+**Method.**
+- Audited the tree and enumerated every hardcoded-path hit, then classified each as *project
+  configuration* (must fix) or *historical record* (must NOT be rewritten).
+- Added `config/paths.py`: derives the project root from its own file location, layers
+  environment variable → `.env` → relative default. Standard library only, so it works before
+  any dependency is installed.
+- Repointed the three `tools/` scripts at it and re-ran them from an unrelated cwd.
+- Generated a committed dataset fingerprint and wrote a verifier for it.
+- Added dependency files, portable `firmware/platformio.ini`, setup scripts for both OSes, and
+  three verification scripts.
+- Hardened `.gitignore` and tested it in both directions.
+
+**Measurements.**
+
+| Item | Result |
+|---|---|
+| Hardcoded paths in tracked **code** before → after | **3 → 0** (`tools/*.py`) |
+| Hardcoded paths in **instructional docs** before → after | 16 → 0 (`CLAUDE.md`, `DATASET.md`, D-001) |
+| Hardcoded paths left in **historical records** | 32, deliberately preserved — see below |
+| `tools/analyze_manifests.py` run from an unrelated cwd | ✅ identical output |
+| Dataset fingerprint | 21,285 files · 685,589,976 B · root SHA-256 `34a1a266…d243de90` |
+| `CHECKSUMS.sha256` | 2.67 MB, one digest per file, sorted, POSIX relative paths |
+| `scripts/verify_dataset.py` | PASS (layout, counts, 6 manifest-CSV digests, 200 sampled files) |
+| `scripts/verify_setup.py` | correctly reported NOT READY under Python 3.14 (no TensorFlow wheels) — the failure path works |
+| `.gitignore` | 8 must-track paths tracked, 10 must-ignore paths ignored |
+| Secrets committed | **none** — `.env.example` contains keys and comments, no values |
+
+**Analysis.** The three `ROOT = r"E:\sih2026\..."` constants were the only true portability
+defects in code; the rest of the exposure was instructional text telling a reader to `cd` into
+a specific drive. Both are now gone. The dataset was the harder problem: it must not enter Git
+at 0.64 GB, yet a second machine needs certainty it has the right bytes. A per-file SHA-256
+list plus a single root hash costs 2.67 MB in the repository and answers that exactly, and it
+also localises a fault to the individual clip rather than merely reporting a mismatch.
+
+Absolute paths were **deliberately left** in `STORAGE_AUDIT.md`, the `[prior-build]` rows of
+`HARDWARE.md`, and the evidence sections of `BUILD_LOG.md` and D-001. Those document what was
+measured on one machine on one date; editing the paths out would falsify a measurement record.
+The portability rule governs code and instructions, not history.
+
+**What this does NOT prove.**
+- **The handoff has not been rehearsed on a second machine.** Nothing here was executed on a
+  clean Windows or Linux host; `setup.ps1`/`setup.sh` are untested end to end, and
+  `requirements.txt` has not been resolved from scratch on a fresh interpreter.
+- `firmware/platformio.ini` has **never been built** — there is no `src/`, so `pio run` cannot
+  succeed yet. Its pins and flags are carried from the prior build and are unverified here.
+- The dataset fingerprint proves *identity*, not *correctness*. It confirms two machines hold
+  the same bytes; it says nothing about whether the labels are right.
+- No SIH implementation was started. No model, no firmware, no server, no UI.
+
+**Next.** Await explicit authorisation to push, then to begin `BUILD_PLAN.md` A1 → A2 → B → C.

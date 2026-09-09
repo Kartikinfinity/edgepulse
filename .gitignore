@@ -1,27 +1,150 @@
-# heavy artefacts — never commit
+# =========================================================================
+# SECRETS AND MACHINE-LOCAL CONFIG  -- never commit
+# =========================================================================
+.env
+.env.*
+!.env.example
+config/local.*
+!config/local.example.*
+secrets.*
+*secrets*.h
+*secrets*.json
+firmware/src/secrets.h
+firmware/include/secrets.h
+server/.env
+*.local.json
+*.local.ini
+*.pem
+*.key
+!**/*public*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.credentials
+credentials.json
+token.json
+.netrc
+.htpasswd
+wifi_credentials.*
+
+# =========================================================================
+# VIRTUAL ENVIRONMENTS
+# =========================================================================
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-env/
+pyvenv.cfg
+
+# =========================================================================
+# PYTHON CACHES AND BUILD OUTPUT
+# =========================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.ipynb_checkpoints/
+
+# =========================================================================
+# PLATFORMIO / EMBEDDED BUILD OUTPUT
+# =========================================================================
+.pio/
+.pioenvs/
+.piolibdeps/
+firmware/.pio/
+*.elf
+*.bin
+*.hex
+*.map
+compile_commands.json
+
+# =========================================================================
+# DATASET AND LARGE GENERATED ARTIFACTS
+# -------------------------------------------------------------------------
+# The 21,267 WAVs are NOT in Git by design. dataset_manifest/ carries the
+# counts and SHA-256 checksums so another machine can prove it has the right
+# data -- see DATASET_SETUP.md.
+# =========================================================================
 data/
 artifacts/
-.venv/
-.pio/
 *.npz
+*.npy
 *.tflite
 *.h5
 *.keras
-*.ckpt*
-__pycache__/
-*.pyc
+*.ckpt
+*.ckpt.*
+*.pb
+saved_model/
+checkpoints/
+runs/
+logs/
+*.log
 
-# audio evidence is kept selectively under docs/experiments, not at large
+# Audio and raw captures. Evidence deliberately attached to an experiment
+# record under docs/experiments/ is the documented exception.
 *.wav
-!docs/experiments/**/*.wav
 *.pcm
+*.flac
+*.mp3
+*.ogg
+!docs/experiments/**/*.wav
 !docs/experiments/**/*.pcm
 
-# local config / secrets
-firmware/src/secrets.h
-server/.env
-*.local.json
+# Model download caches
+.cache/
+*.onnx
+*.ct2
 
-# OS
+# =========================================================================
+# TEMPORARY FILES
+# =========================================================================
+tmp/
+temp/
+scratch/
+*.tmp
+*.bak
+*.orig
+*.rej
+*.swp
+*~
+
+# =========================================================================
+# EDITOR / IDE
+# =========================================================================
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.iml
+*.sublime-*
+.cursor/
+
+# =========================================================================
+# OS-SPECIFIC
+# =========================================================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk

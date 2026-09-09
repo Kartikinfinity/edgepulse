@@ -1,5 +1,17 @@
-import csv, collections, os, sys
-ROOT = r"E:\sih2026\data\solvani_kws_release"
+import csv, collections, os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from config.paths import DATASET_ROOT
+
+if not DATASET_ROOT.is_dir():
+    sys.exit(
+        f"ERROR: dataset not found at {DATASET_ROOT}\n"
+        "  The dataset is not stored in Git. See DATASET_SETUP.md to obtain it,\n"
+        "  or set SIH_DATASET_ROOT in .env if it lives elsewhere on this machine."
+    )
+
+ROOT = str(DATASET_ROOT)
 
 def load(ds):
     rows=[]

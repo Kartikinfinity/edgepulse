@@ -3,9 +3,15 @@
 Everything below was **measured in this tree on 2026-09-09** with
 `tools/analyze_manifests.py` and `tools/audio_probe.py`, unless marked otherwise.
 
-Location: `E:\sih2026\data\solvani_kws_release`
-Provenance: `sih 2026 2.0\training Dataset (don't open)-20260908T164308Z-1-001.zip`
+Location: **`<repo>/data/solvani_kws_release`** by default; override with
+`SIH_DATASET_ROOT` in `.env`. Resolved at runtime by `config/paths.py` — no
+absolute path is assumed anywhere. To obtain and verify it on a new machine, see
+**`DATASET_SETUP.md`**; the committed fingerprint is in `dataset_manifest/`.
+
+Provenance: `training Dataset (don't open)-20260908T164308Z-1-001.zip`
 → nested `solvani_kws_release.zip` (570.5 MB, 42,628 entries).
+Dataset version `solvani_kws_release-1.0`, root SHA-256
+`34a1a266e094c329df6551c2525ae13430a74823497b0dda12273b7ad243de90`.
 
 ---
 
@@ -160,7 +166,9 @@ as the fast iteration loop. Decide by measurement, record in `BUILD_LOG.md`.
 ## 9. Not available
 
 The release README refers to a rebuild tree at `Desktop/data/` holding the **raw uncut
-recordings** and build scripts. **It does not exist on this machine** (checked). Consequences:
+recordings** and build scripts. **It does not exist on the original machine** — confirmed by
+four independent searches across all three of its fixed drives (`STORAGE_AUDIT.md` §11).
+Consequences:
 
 - We cannot re-cut the positives at different offsets from the source sessions.
 - We cannot extend the 1.0 s window (e.g. to 1.2 s of context) for the existing positives.

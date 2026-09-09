@@ -1,0 +1,17 @@
+# Development and analysis extras.
+#
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# RECOMMENDED, not required to run the project.
+
+-r requirements.txt
+
+# tests
+pytest>=8.0
+
+# analysis figures (experiment records in docs/experiments/)
+matplotlib>=3.8
+
+# convenience DSP. The feature pipeline is written against numpy/scipy so that
+# host and device stay numerically identical; librosa is for exploration only.
+librosa>=0.10

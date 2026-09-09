@@ -1,0 +1,13 @@
+# Phase G only - the ASR server and demo dashboard host.
+# NOT required for Phases A-E. Install on the machine that runs the server.
+#
+#   pip install -r requirements-server.txt
+#
+# faster-whisper is MIT-licensed and runs on CPU via CTranslate2, which keeps
+# the project inside the problem statement's open-source-only restriction.
+# See ARCHITECTURE.md 6 and DECISIONS.md D-006.
+
+-r requirements.txt
+
+faster-whisper>=1.0
+websockets>=12.0

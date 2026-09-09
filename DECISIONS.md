@@ -6,12 +6,19 @@ consequences. Architecture-level deviations from the supplied documents are numb
 
 ---
 
-## D-001 — Project root is `E:\sih2026`, not the Desktop folder
+## D-001 — The project is one self-contained tree, on a volume with room for it
 
-**Date:** 2026-09-09 · **Status:** active · **Decided by:** Claude (environment-forced)
+**Date:** 2026-09-09 · **Status:** active · **Amended 2026-09-09 (D-009): the root is now
+machine-independent** · **Decided by:** Claude (environment-forced)
 
-**Decision.** The build tree lives on `E:\sih2026`. The Desktop folders keep the original
-source material (PDFs, zips) and the prior build.
+**Decision.** The project is **one self-contained root**: source, docs, dataset, artifacts,
+build output and the virtual environment all live under a single directory, on a volume with
+enough free space. It is never split across drives.
+
+> **The root is not a fixed path.** On the original machine it was `E:\sih2026`; every
+> absolute path below is the historical record of *why* that machine needed a non-default
+> location. Since D-009 the repository resolves its root at runtime via `config/paths.py` and
+> can be cloned anywhere on Windows or Linux.
 
 **Why.** Measured on this host: C: is a 128 GB NVMe that was **100 % full (0 bytes free)**.
 D: and E: are partitions of a 1 TB SATA HDD with 337 GB and 446 GB free. A Phase-1 build needs
@@ -36,18 +43,21 @@ performed to escape. Closing the 14 GB gap would require uninstalling software o
 personal data, both of which are out of bounds. Full working: `STORAGE_AUDIT.md` §12.
 
 **Consequences.**
-- The project is **one self-contained root on one drive**: `E:\sih2026`. Dataset, source,
-  artifacts, build output and the venv all live inside it. Nothing is split across drives.
-- PlatformIO **core** stays at `C:\Users\Menon\.platformio` (2.4 GB of compiler toolchains).
-  This is a *tool installation*, in the same category as `git.exe` and `python.exe` — not
-  project data. Only `build_dir` points into `E:\sih2026\.pio`.
-- The Python venv and `PIP_CACHE_DIR` go on E:.
+- The project is **one self-contained root on one volume**. Dataset, source, artifacts, build
+  output and the venv all live inside it. Nothing is split across drives.
+- The PlatformIO **core** directory (~2.4 GB of compiler toolchains) stays wherever PlatformIO
+  installs it, outside the repository. This is a *tool installation*, in the same category as
+  `git` and `python` — not project data. Firmware build output goes to `<root>/firmware/.pio`,
+  which is the PlatformIO default and needs no configuration.
+- The Python venv lives at `<root>/.venv`. On a volume that is short of space, redirect
+  `PIP_CACHE_DIR` rather than moving the venv out of the tree.
 - `D:\sih-ml-env` (TensorFlow 2.21.0, from the prior build) is deliberately **not** adopted —
   using it would split the project across drives. `D:\speech_commands` (5.37 GB) may be read as
   an external corpus, the same way any system-installed dataset would be.
-- E: is a **HDD, not SSD** — feature extraction over 21k small files will be I/O-bound.
-  Cache features to a single `.npz` rather than re-reading WAVs each epoch.
-- Fully reversible: if C: later gains ~27 GB, the tree can be moved wholesale.
+- The original volume was a **HDD, not an SSD** — feature extraction over 21k small files is
+  I/O-bound there. The general rule stands on any machine: **cache features to a single `.npz`
+  rather than re-reading 21,267 WAVs each epoch.**
+- Superseded by **D-009**: the tree is no longer tied to any volume and can be cloned anywhere.
 
 ---
 
@@ -191,3 +201,41 @@ buy CPU that Phase 1 has been told to ignore.
 
 **Consequence.** Idle CPU stays high in Phase 1 (prior build: 48 % of one core). That is a
 declared, displayed Phase-2 debt, not an oversight.
+
+---
+
+## D-009 — The repository is machine-independent; paths resolve at runtime
+
+**Date:** 2026-09-09 · **Status:** active · Amends **D-001**
+
+**Decision.** No tracked source file may contain an absolute path, a drive letter, a username,
+or a machine-specific tool location. Everything resolves through `config/paths.py`, which
+derives the project root from its own file location and layers in optional overrides.
+
+Resolution order for every setting: **real environment variable → `<root>/.env` → built-in
+default relative to the root.**
+
+**Why.** The project must continue on a second computer, Windows or Linux, without losing any
+knowledge or state. Hard-coded paths are the single most common reason a handoff fails, and
+this repository had three of them (`ROOT = r"E:\sih2026\data\..."` in each `tools/` script)
+plus a documentation set that told the reader to `cd E:/sih2026`.
+
+**Consequences.**
+- `config/paths.py` is the only place that knows how to find anything. It imports **standard
+  library only**, so it works before any dependency is installed.
+- `.env` is git-ignored; `.env.example` is committed and contains **no values**, only keys and
+  explanation. Wi-Fi credentials and any other secret live only in `.env`.
+- `firmware/platformio.ini` pins no `upload_port`. Port names differ per machine (COM7 on the
+  original Windows host, `/dev/ttyACM0` on Linux); PlatformIO auto-detects, and
+  `SIH_UPLOAD_PORT` overrides.
+- The dataset stays out of Git. `dataset_manifest/` — a JSON summary plus 21,285 SHA-256
+  digests — lets a second machine prove byte-identical data without the 0.64 GB of WAVs.
+- **Historical records are exempt and must not be rewritten.** `STORAGE_AUDIT.md`, the
+  `[prior-build]` rows in `HARDWARE.md`, and the evidence sections of `BUILD_LOG.md` and D-001
+  document what was true on one machine on one date. Editing those paths out would falsify a
+  measurement record. The rule applies to *code and instructions*, not to history.
+
+**Verification.** `scripts/verify_setup.py` (machine readiness), `scripts/verify_dataset.py`
+(data integrity against the committed manifest), `scripts/health_check.py` (project state).
+The `tools/` scripts were re-run from an unrelated working directory to confirm they no longer
+depend on the caller's location.

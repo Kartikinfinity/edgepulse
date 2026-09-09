@@ -1,11 +1,15 @@
 # STATUS.md
 
 **Last updated:** 2026-09-09 · **Phase:** Discovery + bootstrap **COMPLETE**; storage/environment
-prep **COMPLETE**; transition verification **PASSED**.
+prep **COMPLETE**; transition verification **PASSED**; **cross-machine handoff prepared**.
 **Next:** `BUILD_PLAN.md` **A1–A2**, then **B**, then **C**. Awaiting the user's go-ahead.
 
-**Board status changed:** the ESP32 is now attached on **COM7** (B-2 resolved). The only
-remaining hardware blocker is the authoritative pin map (B-1).
+**The repository is now machine-independent** (`DECISIONS.md` D-009). It can be cloned into
+any directory on Windows or Linux; all paths resolve through `config/paths.py`. Start a new
+machine from **`CURRENT_HANDOFF.md`**, which has a NEXT SESSION START block.
+
+**Board status:** the ESP32 was attached on **COM7 on the original machine** (B-2 resolved
+there). Port names differ per machine — never hard-code one.
 
 ---
 
@@ -15,8 +19,11 @@ remaining hardware blocker is the authoritative pin map (B-1).
 |---|---|
 | Discovery (docs, dataset, hardware, toolchain) | ✅ complete |
 | Project documentation bootstrapped | ✅ complete |
-| Python environment | ❌ not created |
-| Firmware skeleton | ❌ not created |
+| Cross-machine portability + handoff | ✅ complete (D-009) |
+| Machine setup / verification / health scripts | ✅ complete |
+| Committed dataset fingerprint (`dataset_manifest/`) | ✅ complete |
+| Python environment | ❌ not created (scripted: `scripts/setup.*`) |
+| Firmware skeleton | 🟡 `firmware/platformio.ini` committed; **no source yet** |
 | Feature pipeline | ❌ not written |
 | Evaluation harness | ❌ not written |
 | Model | ❌ none trained in this tree |
@@ -54,9 +61,11 @@ joins the same router's 2.4 GHz SSID, the router bridges it to the wired LAN and
 server at 192.168.1.2 directly. So the only thing required is the **SSID + password of the
 2.4 GHz network on that router** — no change to host networking.
 
-Three Wi-Fi profiles are already stored on this host: `Airtel_shre_9090`, `Airtel_AIRTEL7`,
-`Galaxy M12C4DD`. The first is the likely match for the Airtel router, but this is **not
-confirmed** and the stored key has deliberately **not** been read. **Blocks:** Phase G3+.
+Three Wi-Fi profiles were already stored on the original host; the one matching the router is
+the likely candidate, but this is **not confirmed** and the stored key was deliberately **not**
+read. *(SSID names are redacted here on purpose — network names are personally identifying and
+this repository may be published. Put the real SSID and password in `.env` only, never in Git.)*
+**Blocks:** Phase G3+.
 
 Fallback is weaker than assumed: the adapter reports `Hosted network supported: No`, so the
 legacy SoftAP path is unavailable; Windows Mobile Hotspot may still work via WiFi-Direct but

@@ -1,0 +1,67 @@
+# Line-ending policy. This file is load-bearing for cross-machine portability:
+# without it, a Windows checkout with core.autocrlf=true rewrites shell scripts
+# to CRLF and Linux then fails with "bad interpreter: /bin/bash^M".
+
+# Default: normalise to LF in the repository, and check out LF everywhere.
+* text=auto eol=lf
+
+# --- must be LF or they break -----------------------------------------------
+*.sh            text eol=lf
+*.bash          text eol=lf
+
+# The dataset fingerprint is hashed byte-for-byte. Any line-ending rewrite would
+# change its digest and make an otherwise-correct dataset look corrupt.
+dataset_manifest/CHECKSUMS.sha256   text eol=lf
+dataset_manifest/manifest.json      text eol=lf
+
+# --- Windows-native tooling, keep CRLF --------------------------------------
+*.ps1           text eol=crlf
+*.psm1          text eol=crlf
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+
+# --- explicit text types ----------------------------------------------------
+*.py            text eol=lf
+*.md            text eol=lf
+*.txt           text eol=lf
+*.toml          text eol=lf
+*.ini           text eol=lf
+*.cfg           text eol=lf
+*.json          text eol=lf
+*.csv           text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.c             text eol=lf
+*.h             text eol=lf
+*.cpp           text eol=lf
+*.hpp           text eol=lf
+*.html          text eol=lf
+*.css           text eol=lf
+*.js            text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.env.example    text eol=lf
+
+# --- binary: never touch ----------------------------------------------------
+*.wav           binary
+*.pcm           binary
+*.flac          binary
+*.mp3           binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.pdf           binary
+*.zip           binary
+*.gz            binary
+*.npz           binary
+*.npy           binary
+*.tflite        binary
+*.h5            binary
+*.keras         binary
+*.bin           binary
+*.elf           binary
+
+# --- diff niceties ----------------------------------------------------------
+# The checksum list is machine-generated; never worth reading as a diff.
+dataset_manifest/CHECKSUMS.sha256   -diff linguist-generated=true

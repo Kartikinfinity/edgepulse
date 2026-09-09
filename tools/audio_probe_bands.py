@@ -1,6 +1,18 @@
 import wave, os, csv, collections, numpy as np
 from scipy import signal
-ROOT = r"E:\sih2026\data\solvani_kws_release\dataset_full"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from config.paths import DATASET_FULL
+
+if not DATASET_FULL.is_dir():
+    sys.exit(
+        f"ERROR: dataset not found at {DATASET_FULL}\n"
+        "  The dataset is not stored in Git. See DATASET_SETUP.md to obtain it,\n"
+        "  or set SIH_DATASET_ROOT in .env if it lives elsewhere on this machine."
+    )
+
+ROOT = str(DATASET_FULL)
 def rd(p):
     with wave.open(p,'rb') as w:
         return np.frombuffer(w.readframes(w.getnframes()),dtype='<i2').astype(np.float32)/32768.0

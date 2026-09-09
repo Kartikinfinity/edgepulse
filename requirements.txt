@@ -1,0 +1,23 @@
+# SIH KWS - core runtime dependencies.
+#
+#   pip install -r requirements.txt
+#
+# Version floors are set to what this project has actually been verified
+# against; upper bounds are avoided so a fresh machine can resolve normally.
+# Verified on the original machine (2026-09-09):
+#   Python 3.13.9 - numpy 2.2.6, scipy 1.16.2, tensorflow 2.20.0
+#
+# Python 3.10-3.13 are supported. TensorFlow does not yet publish wheels for
+# 3.14, so do NOT create the venv with 3.14 - see ENVIRONMENT_SETUP.md.
+
+# --- arrays and signal processing (used by tools/ today) -------------------
+numpy>=1.26,<3
+scipy>=1.11
+
+# --- audio I/O for the feature pipeline (Phase B) --------------------------
+soundfile>=0.12
+
+# --- training, quantisation, TFLite int8 export (Phases B-E) ---------------
+# The architecture targets TensorFlow Lite for Microcontrollers, so TensorFlow
+# is the framework of record. See DECISIONS.md D-003.
+tensorflow>=2.16,<3
