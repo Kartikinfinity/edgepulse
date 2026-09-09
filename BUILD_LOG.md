@@ -449,3 +449,75 @@ for firmware.
 `firmware/recorder/` and `tools/record_session.py`, then run **ONE pilot session**. Exit bar:
 format uniform, RMS in range, zero dropouts, visible keyword-onset spread, ≤10 % rejects.
 **Do not recruit before the pilot passes.**
+
+---
+
+## EXP-003 — KWS engine selection, pipeline verification, keyword lock, dataset re-tiering
+**Date:** 2026-09-09 · **Phase:** demo build, T-0 · **Status:** PASS (decisions recorded;
+**nothing trained, nothing collected**)
+
+**Objective.** Before collecting data, determine the actual inference engine; verify rather than
+assume the feature/inference pipeline; sanity-check the keyword against the chosen engine; and
+re-tier the dataset so the 12–16 h demo is not blocked on a research-grade corpus.
+
+**Pre-declared pass bar.** (1) Three engine options evaluated against all 13 requested criteria
+using current official documentation, not memory; (2) the winner justified on feasibility within
+the window, not familiarity; (3) every pipeline parameter documented with its source and its
+*derivation*, including inference cadence; (4) keyword either locked or stopped-on with a
+reason; (5) a Tier-1 spec that is buildable in the remaining time with every methodological
+control retained; (6) Tier 2 preserved and explicitly non-blocking.
+
+**Method.** Fetched Espressif's ESP-SR customization documentation and searched for a
+self-service path; fetched microWakeWord's repository, ESPHome component docs and licence;
+identified the underlying architecture paper (Rybakov et al., *Streaming keyword spotting on
+mobile devices*, arXiv 2005.06720). Scored all three against the requested criteria.
+
+**Findings.**
+
+| Finding | Consequence |
+|---|---|
+| **ESP-SR/WakeNet custom training is not self-service** — paid Espressif service or paid third party; **2–3 weeks**; prerequisite corpus **>500 speakers, ≥100 children, ≥20,000 entries** | **Eliminated on availability**, not preference. Cannot start today. |
+| **microWakeWord is Apache 2.0, self-service, TFLM-based, streaming MixConv, int8, arena ~22,860 B, and explicitly optimises false-accepts-per-hour** | Genuinely strong; **rejected as a runtime** only because its `micro_speech` frontend applies **NS + AGC** and is ESPHome/ESP-IDF-shaped — a parity port landing in the final hours |
+| **TFLM + ESP-NN is the only option with measured evidence on this board and toolchain** — 84.17 ms, 15,460 B arena, ESP-NN 5.48×, MFCC parity 1.0000000000 `[prior-build]` | **Selected (D-012)** |
+| **TFLM imposes no feature pipeline** — it runs whatever graph it is given | The 49×13 / 25 ms / 20 ms pipeline is **ours**, which is exactly why it needed verifying. microWakeWord's very different 30 ms / 10 ms / 40-feature choice proves the point. |
+| **Inference cadence ≠ hop.** At 84.17 ms, one inference per 20 ms hop needs **421 % CPU** | **200 ms cadence chosen** (~42 % duty; prior measured 48 % at this cadence). 100 ms available as a demo-day latency improvement. |
+| **⚠ The 1.0 s window cannot hold a slow utterance.** Slow rate is 700–1000 ms; the ≥60 ms margin rule caps admissible duration at **880 ms** | Left unfixed, slow speech would be labelled `hard_negative/partial` — **training the model to reject deliberate speech**. Tier-1 fix: prompt slow as "deliberate, not drawn out", flag `duration_over_window`. Tier-2 fix: widen to 1.2 s (60×13). |
+
+**Keyword sanity check — `Takshila` LOCKED.** Trainable on the chosen engine with no vocabulary
+constraint; fits the window at normal and fast rates; /ʃ/ sits in the INMP441's cleanest 3–8 kHz
+band; discriminative events survive 13-MFCC compression; ~600 ms spans ≥3 inference windows at
+200 ms cadence, which is what makes M-of-N smoothing viable. **No serious technical reason to
+change it was found.**
+
+**Re-tiering (D-013).** Tier 1 = `DEMO_DATASET_SPEC.md`, **6 speakers × 40 positives**, ~3.5 h of
+data work, minimum 3 speakers. Tier 2 = `RESEARCH_DATASET_ROADMAP.md`, unchanged, explicitly
+non-blocking. **Only scale was reduced** — speaker-disjoint splits, the ten leakage assertions,
+the metadata schema, partial-keyword negatives, offset-sampling-is-not-augmentation,
+recorded-not-mixed test conditions and the QC thresholds all carry across intact.
+
+**Analysis.** The engine decision was closer than expected. microWakeWord scored 53 to TFLM's 59
+and is arguably the better *engineering* choice in a normal schedule — it is free, self-service,
+streaming, and it optimises the exact metric the PS grades. It lost on one thing: **where its
+risk lands.** Its frontend port would be debugged in the last hours before a demo, and D-003
+already priced an IDF-5.x migration as unaffordable. Choosing the option with measured numbers
+on this exact board is the correct trade under a deadline — and the fallback trigger at T+6 h is
+declared now precisely so that judgement is not remade under pressure.
+
+The most useful output was not the engine choice but the **cadence and window findings**. Both
+were assumptions inherited from the architecture document; one turned out to be a 421 % CPU
+impossibility if taken literally, and the other would have quietly trained the model to reject
+slow speech. Neither was visible without doing the arithmetic.
+
+**What this does NOT prove.**
+- **No model has been trained and no audio recorded.** Every figure remains `[prior-build]` or a
+  projection.
+- microWakeWord was **not benchmarked on our hardware** — its rejection is a risk judgement
+  about integration cost, not a measured performance comparison.
+- The 200 ms cadence rests on a prior-build inference time that is **unverified in this tree**.
+  If A4/A5 measure materially different timing, the cadence must be recomputed.
+- The 880 ms window limit is derived from *expected* keyword durations; real durations are
+  measured in the pilot.
+
+**Next.** Resolve **B-1 (pin map)** — now the critical path for the entire build — wire the
+INMP441, verify the bit shift (QC-8), then **record the test speaker first and quarantine it**.
+Start CS-WILD ambient capture and Piper hard-negative generation immediately; both run unattended.

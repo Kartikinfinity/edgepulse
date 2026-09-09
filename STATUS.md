@@ -87,17 +87,21 @@ FakeWake, Schönherr et al., Amazon's wake-word patent and Indian English phonol
 3 syllables · 7 phonemes · 4 manner classes · 5 places of articulation.
 **Changing it later invalidates every recording made.** Do not reopen it.
 
-### 🟡 B-6 — No dataset yet — **fully specified, collection blocked on B-1**
-`DATASET_SPEC.md` is complete: 37 sections, design frozen. Target **30 speakers × 48 positive
-utterances**, ~39,800 clips, plus **20 h** of continuous false-alarm audio. Minimum viable is
-15 speakers / 120 held-out test positives (±5.4 pp).
+### 🟡 B-6 — No dataset yet — **Tier-1 spec ready, collection blocked on B-1**
+**Rescoped to a two-tier strategy (D-013).** The demo builds **Tier 1**
+(`DEMO_DATASET_SPEC.md`): **6 speakers × 40 positives**, ~3.5 h of data work, minimum 3
+speakers. The 30-speaker research programme moved to `RESEARCH_DATASET_ROADMAP.md` and **no
+longer blocks the demo**.
 
-**Collection cannot start until B-1 is resolved** — ≥70 % of positives must be recorded through
-the INMP441 on the ESP32-S3, and the mic is not wired. Re-recording 30 speakers later is not
-feasible, so recording them once, correctly, is the only option. `DATASET_SPEC.md` §19, §35.
+**Collection still cannot start until B-1 is resolved** — 100 % of Tier-1 human positives must
+be captured through the INMP441, because at this corpus size device match is the only domain
+advantage available. Fallback if B-1 is unresolved at T+2 h: laptop capture with
+`device_simulated=true`, which is materially worse and must be declared.
 
-**Blocks:** feature pipeline, evaluation harness, training, on-device KWS.
-**Does NOT block:** hardware bring-up, firmware skeleton, server/UI scaffolding.
+**Honesty obligation:** 6 speakers ⇒ **speaker-dependent-leaning**, test CI **±9.5 pp**, and a
+3–6 h FA/hour figure is an order-of-magnitude statement. **No speaker-independence claim.**
+
+**Blocks:** training, on-device KWS. **Does NOT block:** bring-up, server/UI scaffolding.
 
 ### 🟢 B-4 — C: free space — RESOLVED as far as is safely possible
 Was 0 bytes. A cache-only cleanup on 2026-09-09 recovered **12.36 GB**; C: now holds
@@ -138,10 +142,15 @@ use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets t
 ## Immediate next actions
 
 1. ~~Keyword selection~~ ✅ done — `Takshila` (D-011).
-2. ~~Dataset specification~~ ✅ done — **`DATASET_SPEC.md`**, 37 sections, frozen.
-3. **Resolve B-1 (pin map)** — now the critical-path blocker for the whole dataset.
-4. **Build the recorder** (`firmware/recorder/` + `tools/record_session.py`), then run **ONE
-   pilot session** and measure it. Do not recruit before the pilot passes.
+2. ~~Dataset specification~~ ✅ done — two tiers (D-013): **`DEMO_DATASET_SPEC.md`** builds now;
+   `RESEARCH_DATASET_ROADMAP.md` is post-demo.
+3. ~~Engine selection~~ ✅ done — **TFLM + ESP-NN** (D-012); ESP-SR unavailable, microWakeWord
+   is the declared T+6 h fallback.
+4. ~~Dataset tiering~~ ✅ done — **`DEMO_DATASET_SPEC.md`** is the build target (D-013).
+5. **Resolve B-1 (pin map)** — the critical-path blocker for the entire build.
+6. **Wire INMP441, verify the bit shift (QC-8), record the TEST speaker first** and quarantine
+   it. Start CS-WILD ambient capture and Piper hard-negative generation early — both run
+   unattended and cost no wall-clock.
 3. **In parallel, hardware-side and dataset-independent:** environment setup (A1), the
    PlatformIO skeleton (A2), and — once the pin map arrives — bring-up A3–A6.
 4. **Still needed from the user:** the authoritative pin map (**B-1**) and the 2.4 GHz Wi-Fi

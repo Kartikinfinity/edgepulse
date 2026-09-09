@@ -47,7 +47,9 @@ and the wake keyword is settled. There is no dataset, no implementation code, an
 been measured on hardware in this repository.**
 
 Next task: **resolve the pin map (B-1), build the recorder, run one measured pilot session.**
-The dataset is fully specified in [`DATASET_SPEC.md`](DATASET_SPEC.md) — build from it.
+Dataset: **Tier 1** [`DEMO_DATASET_SPEC.md`](DEMO_DATASET_SPEC.md) builds now;
+[`RESEARCH_DATASET_ROADMAP.md`](RESEARCH_DATASET_ROADMAP.md) is the post-demo target.
+Engine: TFLite Micro + ESP-NN — [`KWS_ENGINE_DECISION.md`](KWS_ENGINE_DECISION.md).
 Open blockers: **B-1** pin map (now critical path) · **B-6** no dataset yet · **B-3** Wi-Fi.
 Live detail in [`STATUS.md`](STATUS.md).
 
@@ -63,7 +65,9 @@ Live detail in [`STATUS.md`](STATUS.md).
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design and every justified deviation |
 | [`DATASET.md`](DATASET.md) | **Dataset status (NOT YET CREATED) and the plan to build one** |
 | [`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md) | Keyword research, scoring and licence audit |
-| [`DATASET_SPEC.md`](DATASET_SPEC.md) | **The frozen dataset build specification (37 sections)** |
+| [`DEMO_DATASET_SPEC.md`](DEMO_DATASET_SPEC.md) | **Tier 1 — the dataset being built now** |
+| [`RESEARCH_DATASET_ROADMAP.md`](RESEARCH_DATASET_ROADMAP.md) | Tier 2 — post-demo research-grade target |
+| [`KWS_ENGINE_DECISION.md`](KWS_ENGINE_DECISION.md) | **Engine choice, pipeline verification, keyword lock** |
 | [`DATASET_RESET_AUDIT.md`](DATASET_RESET_AUDIT.md) | Audit behind the dataset reset |
 | [`GIT_HISTORY_DATASET_PURGE.md`](GIT_HISTORY_DATASET_PURGE.md) | Why no history rewrite is needed |
 | [`HARDWARE.md`](HARDWARE.md) | Board, microphone, GPIO constraints, toolchain |

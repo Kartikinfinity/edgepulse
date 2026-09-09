@@ -67,10 +67,11 @@ set `SIH_UPLOAD_PORT` in `.env`.
 
 ```
 DATASET STATUS: NOT YET CREATED
-KEYWORD:        "Takshila" - CONFIRMED (D-011)
-DATASET SPEC:   COMPLETE - DATASET_SPEC.md (frozen, 37 sections)
-NEXT OBJECTIVE: resolve B-1 (pin map) -> build recorder -> ONE measured
-                pilot session -> collect.
+KEYWORD:        "Takshila" - LOCKED (D-011, sanity-checked)
+ENGINE:         custom NN on TFLite Micro + ESP-NN (D-012)
+DATASET:        TIER 1 = DEMO_DATASET_SPEC.md (6 speakers, build now)
+                TIER 2 = RESEARCH_DATASET_ROADMAP.md (post-demo)
+NEXT OBJECTIVE: resolve B-1 -> wire INMP441 -> record TEST speaker first.
 ```
 
 **Keyword facts you will need constantly.** `Takshila` = 3 syllables, 7 phonemes,
@@ -211,11 +212,14 @@ pio device monitor
 1. ~~Keyword selection~~ ✅ **DONE — `Takshila` (D-011).** Do not reopen it.
 2. ~~Dataset design specification~~ ✅ **DONE — `KEYWORD_SELECTION.md` §§13–15.** Use it;
    do not redesign it.
-3. ~~Dataset specification~~ ✅ **DONE — `DATASET_SPEC.md`, frozen.** Build from it; do not
-   redesign it.
-4. **Resolve B-1 (pin map)** — now the critical-path blocker: ≥70 % of positives must be
-   recorded on the real INMP441, so collection cannot start without it.
-5. **Recorder + ONE measured pilot session** before recruiting anyone — the current task.
+3. ~~Dataset specification~~ ✅ **DONE.** Two tiers (D-013): build **`DEMO_DATASET_SPEC.md`**
+   now; `RESEARCH_DATASET_ROADMAP.md` is post-demo and does not block.
+4. ~~Engine selection~~ ✅ **DONE — TFLM + ESP-NN** (D-012). Pipeline verified, not assumed:
+   `KWS_ENGINE_DECISION.md` §4.
+5. **Resolve B-1 (pin map)** — critical path for the whole build; no INMP441 recording without
+   it.
+6. **Record the TEST speaker first and quarantine it.** Start ambient capture and Piper
+   negative generation early — both unattended.
 4. Collection — **keeping every raw session**, speaker IDs recorded from the first file.
 5. Curate, build, version and fingerprint the dataset.
 6. **Only then**: features, the streaming evaluation harness (before any model), training.

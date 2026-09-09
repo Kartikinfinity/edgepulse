@@ -8,12 +8,15 @@ KEYWORD:
     "Takshila"  /takshiila/  "tuk-SHEE-laa"  - CONFIRMED, binding
     (KEYWORD_SELECTION.md, DECISIONS.md D-011)
 
-DATASET SPEC:
-    COMPLETE - DATASET_SPEC.md (37 sections, design frozen)
+ENGINE:
+    Custom neural KWS on TFLite Micro + ESP-NN (D-012)
+
+DATASET SPEC - TWO TIERS (D-013):
+    TIER 1 (build now)  : DEMO_DATASET_SPEC.md - 6 speakers, ~3.5 h
+    TIER 2 (post-demo)  : RESEARCH_DATASET_ROADMAP.md - 30 speakers, ~80 h
 
 NEXT OBJECTIVE:
-    Resolve blocker B-1 (pin map), build the recorder, then run ONE pilot
-    session and measure it before recruiting any speaker.
+    Resolve B-1 (pin map) -> wire INMP441 -> record the TEST speaker first.
 ```
 
 **Last updated:** 2026-09-09 · **Status:** reset · See `DATASET_RESET_AUDIT.md` for the audit
@@ -114,7 +117,8 @@ In order. **None of it has started, and none of it may be skipped.**
    phonetic and hard-negative analysis, the ISRO/SIH and ESP32/WakeNet analyses, and the
    licence audit. **The full data specification is §§13–15 of that document** — treat it as
    the input to step 2, not as something to redo.
-2. ~~**Dataset design specification**~~ **DONE — `DATASET_SPEC.md`.** 37 sections covering
+2. ~~**Dataset design specification**~~ **DONE — split into two tiers (D-013).**
+   **Build now: `DEMO_DATASET_SPEC.md`.** Post-demo: `RESEARCH_DATASET_ROADMAP.md`, 37 sections covering
    classes, acoustic conditions, format, preprocessing, augmentation, splits, leakage controls,
    QC, metadata, licensing, sizes, evaluation-only sets, the hard-negative test set and the
    long-form continuous false-alarm protocol. **Treat it as the build input, not as something

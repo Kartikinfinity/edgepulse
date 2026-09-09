@@ -1,11 +1,40 @@
-# DATASET_SPEC.md — production KWS dataset for `Takshila`
+# RESEARCH_DATASET_ROADMAP.md — Tier 2
 
-**Date:** 2026-09-09 · **Status:** design complete, **collection not started**
+# ⏭ POST-DEMO / FUTURE DATA COLLECTION
+
+> **This document does NOT block the current build.**
+>
+> It is the **research-grade** dataset target: ~30 speakers, ~39,800 clips, 20 h of continuous
+> false-alarm audio, ~70–85 h of effort. It is what this project should collect **after** the
+> demo, and it is what the answer to *"what would you do with more time and resources?"* points
+> at.
+>
+> **The dataset being built now is `DEMO_DATASET_SPEC.md` (Tier 1).** That document deliberately
+> retains every methodological control below — leakage prevention, metadata schema,
+> hard-negative strategy, continuous-audio evaluation, reproducibility — and reduces only
+> *scale*.
+>
+> **Nothing in this document has been collected.** Every number here is a target.
+
+**Date:** 2026-09-09 · **Status:** deferred to post-demo · **Tier:** 2 (research-grade)
 **Target:** ESP32-S3-WROOM-1-N16R8 + INMP441, continuous always-listening KWS
-**Keyword:** `Takshila` — confirmed and binding, `DECISIONS.md` **D-011**
+**Keyword:** `Takshila` — locked, `DECISIONS.md` **D-011**
 
-This is the build specification. It is the input to collection, not a document to redesign.
-Research behind the keyword and the first-cut data requirements: `KEYWORD_SELECTION.md`.
+### Why Tier 2 matters even though it is deferred
+
+The Tier-1 corpus has **6 speakers**. That is enough for a working demo and **not** enough to
+claim speaker independence. The gap between the two tiers is the honest answer to the project's
+single biggest limitation, and it is quantified rather than hand-waved:
+
+| | Tier 1 (now) | Tier 2 (this document) | Espressif's production bar |
+|---|---|---|---|
+| Speakers | 6 | 30 | **>500, ≥100 children** |
+| Test positives | 40 (**±9.5 pp**) | 240 (**±3.8 pp**) | — |
+| Continuous FA audio | 3–6 h (**±order of magnitude**) | 20 h (**±factor of 2**) | — |
+| Effort | ~3.5 h | ~70–85 h | weeks, paid |
+
+Research behind the keyword: `KEYWORD_SELECTION.md`. Engine and pipeline:
+`KWS_ENGINE_DECISION.md`.
 
 > **Keyword suitability re-check (required before designing):** no evidence encountered during
 > this design indicates `Takshila` is unsuitable. Its 7 phonemes, 4 manner classes and

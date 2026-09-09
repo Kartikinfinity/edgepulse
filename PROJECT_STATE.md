@@ -42,7 +42,9 @@ Snapshot date: **2026-09-09** · Regenerate the live view with
 | `EXPERIMENT_STATE.md` | Experiment ledger — what has been measured and what has not |
 | `DECISIONS.md` | D-001…D-011, irreversible decisions with reasoning |
 | `KEYWORD_SELECTION.md` | Keyword research: 18 candidates, scoring, phonetics, licence audit |
-| `DATASET_SPEC.md` | **The frozen dataset build specification — 37 sections** |
+| `DEMO_DATASET_SPEC.md` | **Tier 1 — the dataset being built NOW (6 speakers)** |
+| `RESEARCH_DATASET_ROADMAP.md` | Tier 2 — post-demo research-grade target (30 speakers) |
+| `KWS_ENGINE_DECISION.md` | **Engine choice, pipeline verification, keyword lock** |
 | `BUILD_LOG.md` | Append-only log with pre-declared pass bars |
 | `STORAGE_AUDIT.md` | Historical record of the original machine's storage work |
 
@@ -103,7 +105,8 @@ hardware measurements taken in this tree.**
 | Phase | Description | State |
 |---|---|---|
 | **0.1** | **Keyword selection** | DONE — **`Takshila` (D-011)** |
-| **0.2** | **Dataset specification** | DONE — **`DATASET_SPEC.md`, frozen** |
+| **0.2** | **Dataset specification** | DONE — **two tiers (D-013)** |
+| **0.2b** | **KWS engine selection** | DONE — **TFLM + ESP-NN (D-012)** |
 | **0.3–0.5** | **Recorder, pilot, collection, build** | blocked on **B-1 (pin map)**; blocks B–F |
 | A1 | Python venv | ⚪ scripted, not yet run on the target machine |
 | A2 | PlatformIO skeleton | 🟡 `platformio.ini` committed; no `src/` yet |

@@ -352,3 +352,84 @@ published phonetics, not a measurement**. The Phase-C streaming harness measures
 the measured FA/hour is unacceptable, the correct response is to **revisit the keyword**, not to
 tune the threshold — `DECISIONS.md` D-005 and the predecessor's experience are unambiguous that
 decision-logic tuning does not create detection capability.
+
+---
+
+## D-012 — KWS engine: custom neural model on TFLite Micro + ESP-NN
+
+**Date:** 2026-09-09 · **Status:** active · Full comparison: `KWS_ENGINE_DECISION.md`
+Cross-ref D-003 (toolchain), D-005 (evaluation), D-011 (keyword)
+
+**Decision.** The inference engine is a **custom neural KWS model trained by us and deployed
+through TensorFlow Lite for Microcontrollers with ESP-NN kernels**, on the installed Arduino
+core 2.0.17 / ESP-IDF 4.4 stack. **ESP-SR / WakeNet is rejected. microWakeWord is rejected as a
+runtime but adopted as a data strategy, and is the declared fallback.**
+
+**Why ESP-SR / WakeNet is eliminated — availability, not preference.** Custom WakeNet training
+is **not self-service**. Espressif offers a paid corpus-collection-and-training service (and
+third parties resell the same), with a **2–3 week turnaround** and a **>500-speaker,
+≥100-children, ≥20,000-entry** corpus prerequisite. It cannot begin today, let alone finish
+inside a 12–16 h window. It is also an ESP-IDF component against our Arduino stack.
+
+**Why microWakeWord is rejected as a runtime, despite being good.** It is Apache 2.0,
+self-service, streaming (MixConv, after Rybakov et al., arXiv 2005.06720), int8, TFLM-based, and
+it explicitly optimises **false accepts per hour** — our headline metric. But it is built for
+ESPHome/ESP-IDF, and its `micro_speech` frontend applies **noise suppression and AGC**.
+Reproducing that frontend bit-exactly on our stack is a host/device parity problem, and D-003
+already records that an IDF-5.x migration costs a multi-GB download and hours we do not have.
+**The risk would land in the final hours before the demo — the worst place to put it.**
+
+**Why B wins.** It is the only option with **measured evidence on this exact board and
+toolchain**: 84.17 ms/inference, 15,460 B arena, ESP-NN worth **5.48×**, and MFCC host/device
+parity at correlation 1.0000000000 `[prior-build]`. Everything else is projection. It also makes
+PS compliance unambiguous — C10 (open-source TinyML) and C11 (trained on a custom keyword) are
+satisfied by construction, and the licences are clean (TFLM and the `ESP_TF` Arduino port are
+both Apache 2.0).
+
+**Adopted from microWakeWord anyway.** Its **synthetic-first data strategy**: Piper TTS
+generation is the proven way to get breadth without speakers, which is exactly tomorrow's
+constraint. Used **without reservation for hard negatives** (we need the model to reject a phone
+sequence, and a synthetic *shiksha* contains क्ष genuinely) and **only under the D-007 A/B gate
+for positives**. Synthetic speech is never presented as equivalent to diverse real speakers.
+
+**Pre-declared fallback.** If the training pipeline has not produced a converging model by
+**T+6 h**, switch to microWakeWord and accept the frontend-port risk. A working model on a
+different runtime beats no model. This trigger is declared now so it is not a judgement made
+under pressure later.
+
+**Consequences.**
+- The feature pipeline is **ours to define** — TFLM imposes none. The 49×13 / 25 ms / 20 ms
+  pipeline stands, verified rather than assumed (`KWS_ENGINE_DECISION.md` §4).
+- **Inference cadence is 200 ms, not one per 20 ms hop.** At 84.17 ms/inference, one inference
+  per hop would need 421 % CPU. 200 ms gives ~42 % duty and matches the only cadence with a
+  measured figure on this board.
+- A **known limitation is accepted for Tier 1**: utterances slower than ~880 ms cannot satisfy
+  the positive-class margin rule inside a 1.0 s window. The slow rate is prompted as
+  "deliberate, not drawn out" and over-length takes are flagged and excluded rather than
+  silently mislabelled. Widening to 1.2 s (60×13) is the first Tier-2 architecture experiment.
+
+---
+
+## D-013 — Two-tier dataset strategy; the demo is not blocked on research-grade data
+
+**Date:** 2026-09-09 · **Status:** active · **Decided by:** the user (project-management change)
+
+**Decision.** The dataset is split into two explicit tiers. **Tier 1
+(`DEMO_DATASET_SPEC.md`)** — 6 speakers, ~3.5 h of data work — is built now and is what the
+demo runs on. **Tier 2 (`RESEARCH_DATASET_ROADMAP.md`)** — 30 speakers, 20 h of continuous
+audio, ~70–85 h — is preserved unchanged as a post-demo target and **does not block this build**.
+
+**What is reduced, and what explicitly is not.** Only **scale** is reduced. Every
+methodological control carries across unchanged: speaker-disjoint splits, the ten enumerated
+leakage assertions, the metadata schema, the hard-negative tier strategy, partial-keyword
+negatives, offset-sampling-is-not-augmentation, recorded-not-mixed test conditions, the QC
+thresholds, and the continuous-audio evaluation protocol. **A small dataset built correctly is
+defensible; a large one built carelessly is not.**
+
+**The honesty obligation this creates.** With 6 speakers the system is
+**speaker-dependent-leaning**, and the test split holds ~40 positives — a **±9.5 pp** confidence
+interval. With 3–6 h of continuous audio, an FA/hour figure is an **order-of-magnitude**
+statement, not a number: at a true 0.5 FA/h, 3 h gives a 95 % CI of 0.10–1.83 FA/h.
+**No speaker-independence claim may be made**, and every reported rate must carry its CI and
+observation duration. `RESEARCH_DATASET_ROADMAP.md` is the documented answer to "what would you
+do with more time".

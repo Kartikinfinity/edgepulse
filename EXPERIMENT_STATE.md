@@ -124,8 +124,9 @@ A figure swept and judged on the same audio is **provisional**, never a result.
 | Next | Depends on |
 |---|---|
 | ~~EXP-001 — keyword selection~~ | **PASS — `Takshila` (D-011)** |
-| ~~EXP-002 — dataset specification~~ | **PASS — `DATASET_SPEC.md`, frozen** |
+| ~~EXP-002 — dataset specification~~ | **PASS — now `RESEARCH_DATASET_ROADMAP.md` (Tier 2)** |
+| ~~EXP-003 — KWS engine selection + pipeline verification~~ | **PASS — TFLM+ESP-NN, D-012** |
 | **EXP-003** — recorder firmware + ONE measured pilot session | **blocked: pin map (B-1)** |
-| **EXP-004** — full collection against `DATASET_SPEC.md` | EXP-003 pilot passing |
+| **EXP-004** — Tier-1 collection against `DEMO_DATASET_SPEC.md` | **B-1 pin map** |
 | **EXP-004** — validate the authoritative pin map against `HARDWARE.md` §3 | **blocked: pin map (B-1)** |
 | **EXP-005** — board identity readout (A4) | board attached |

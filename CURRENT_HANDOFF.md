@@ -35,10 +35,10 @@ python scripts/health_check.py        # shows phase progress and blockers
 run ONE measured pilot session.**
 
 The keyword is settled (**`Takshila`**, D-011) and the dataset is **fully specified and frozen**
-in `DATASET_SPEC.md` — **build from it, do not redesign it.**
+in **`DEMO_DATASET_SPEC.md`** (Tier 1) — **build from it, do not redesign it.**
 
 **B-1 is now the critical path for the whole project**, not just for firmware: ≥70 % of positive
-utterances must be recorded through the real INMP441 (`DATASET_SPEC.md` §35), and re-recording
+utterances must be recorded through the real INMP441 (`DEMO_DATASET_SPEC.md` §3), and re-recording
 30 speakers later is not feasible. Order: pin map → wire → A4/A5 → recorder → pilot → collect.
 
 **Do not train anything before the streaming evaluation harness exists.** The reason is in
@@ -106,7 +106,9 @@ which derives the root from its own file location.
 ```
 DATASET STATUS: NOT YET CREATED
 KEYWORD:        "Takshila" - CONFIRMED, binding (D-011)
-DATASET SPEC:   COMPLETE and FROZEN - DATASET_SPEC.md (37 sections)
+ENGINE:         TFLite Micro + ESP-NN (D-012)
+DATASET:        TIER 1 = DEMO_DATASET_SPEC.md (build now, 6 speakers)
+                TIER 2 = RESEARCH_DATASET_ROADMAP.md (post-demo)
 NEXT OBJECTIVE: B-1 pin map -> recorder -> ONE measured pilot -> collect.
 ```
 
