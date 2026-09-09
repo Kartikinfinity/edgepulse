@@ -1,7 +1,11 @@
 # STATUS.md
 
-**Last updated:** 2026-09-09 · **Phase:** Discovery + bootstrap **COMPLETE**
-**Next:** `BUILD_PLAN.md` Phase A1–A2 and Phase B (neither needs hardware).
+**Last updated:** 2026-09-09 · **Phase:** Discovery + bootstrap **COMPLETE**; storage/environment
+prep **COMPLETE**; transition verification **PASSED**.
+**Next:** `BUILD_PLAN.md` **A1–A2**, then **B**, then **C**. Awaiting the user's go-ahead.
+
+**Board status changed:** the ESP32 is now attached on **COM7** (B-2 resolved). The only
+remaining hardware blocker is the authoritative pin map (B-1).
 
 ---
 
@@ -33,15 +37,30 @@ marked UNCONFIRMED. **Blocks:** A3, and therefore all of Phase A5+ and Phase F.
 **Validation ready:** `HARDWARE.md` section 3 has the full constraint table (GPIO 35/36/37 are
 tied to Octal PSRAM on this module and must not be used; 0/3/45/46 are strapping pins).
 
-### 🔴 B-2 — The ESP32 is not attached to this host
-No `VID_303A` USB device is enumerated; the only serial port present is a legacy ACPI `COM1`.
-The prior build used COM5. **Blocks:** every on-device task (A4–A6, F, I, and G3–G6).
-**Not blocking:** Phases B, C, D, E, H — about 9 of the 16 planned hours.
+### 🟢 B-2 — ESP32 attached — RESOLVED 2026-09-09
+`USB\VID_303A&PID_1001` now enumerates as USB Composite Device + **USB Serial Device (COM7)**
++ USB JTAG/serial debug unit, all `Status: OK`; `pio device list` reports
+`VID:PID=303A:1001 SER=E0:72:A1:D7:20:24`. **The port is COM7, not the prior build's COM5.**
+Nothing has been flashed and no chip readout has been performed — board identity (chip rev,
+flash, PSRAM, heap) is still `[prior-build]` and is verified in **A4**.
+**Unblocks:** A4–A6, F, I, and the device half of B4 — once B-1 (pin map) arrives.
 
 ### 🔴 B-3 — Wi-Fi credentials for the demo network
-The host's only live link is Ethernet at `192.168.1.2/24`, implying a router at
-`192.168.1.1`. The ESP32-S3 is **2.4 GHz only**. Needed: SSID + password of a 2.4 GHz network
-the host can also reach. Fallback: Windows Mobile Hotspot. **Blocks:** Phase G3+.
+Router **192.168.1.1 confirmed reachable** from the host's Ethernet link (192.168.1.2/24).
+The ESP32-S3 is **2.4 GHz only**.
+
+**Refinement measured 2026-09-09:** the *host* does not need to join Wi-Fi at all. If the ESP32
+joins the same router's 2.4 GHz SSID, the router bridges it to the wired LAN and it reaches the
+server at 192.168.1.2 directly. So the only thing required is the **SSID + password of the
+2.4 GHz network on that router** — no change to host networking.
+
+Three Wi-Fi profiles are already stored on this host: `Airtel_shre_9090`, `Airtel_AIRTEL7`,
+`Galaxy M12C4DD`. The first is the likely match for the Airtel router, but this is **not
+confirmed** and the stored key has deliberately **not** been read. **Blocks:** Phase G3+.
+
+Fallback is weaker than assumed: the adapter reports `Hosted network supported: No`, so the
+legacy SoftAP path is unavailable; Windows Mobile Hotspot may still work via WiFi-Direct but
+is untested.
 
 ### 🟢 B-4 — C: free space — RESOLVED as far as is safely possible
 Was 0 bytes. A cache-only cleanup on 2026-09-09 recovered **12.36 GB**; C: now holds
@@ -86,7 +105,8 @@ use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets t
 
 ## Immediate next actions
 
-1. **Unblocked, start now:** A1 (venv on E:), A2 (PlatformIO skeleton), then Phase B and C.
-2. **Needed from the user:** the authoritative pin map (B-1), the board plugged in (B-2),
-   Wi-Fi SSID/password (B-3).
-3. **Recommended:** free a few GB on C: (B-4).
+1. **Unblocked, ready to start:** A1 (venv on E:), A2 (PlatformIO skeleton with `upload_port`
+   = **COM7** and `build_dir` on E:), then Phase B and Phase C.
+2. **Still needed from the user:** the authoritative pin map (**B-1**) and the 2.4 GHz Wi-Fi
+   SSID + password (**B-3**).
+3. Resolved: board attached (B-2), C: free space (B-4).

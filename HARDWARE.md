@@ -16,7 +16,7 @@ previous "Sentinel" build, must be re-verified · **[datasheet]** vendor documen
 | PSRAM | 8 MB **Octal** SPI | [datasheet] Table 1; [prior-build] `psramFound()` = true, 8,386,231 B |
 | Internal SRAM (heap) | 394,924 B total / 370,680 B free at boot | [prior-build] |
 | Link | Native USB-Serial/JTAG, USB VID:PID `303A:1001` | [prior-build] |
-| Port | COM5 @ 921600 | [prior-build] — **currently absent, see §6** |
+| Port | **COM7** | **[measured-here] 2026-09-09** — `USB VID:PID=303A:1001 SER=E0:72:A1:D7:20:24 LOCATION=1-5:x.0`, enumerated as "USB Serial Device (COM7)" + "USB JTAG/serial debug unit". **The prior build used COM5; the port number has changed — do not hard-code COM5.** |
 
 ## 2. Microphone — INMP441
 
@@ -90,11 +90,11 @@ All rows are **[prior-build]** and are re-measured in Phase A of `BUILD_PLAN.md`
 | CPU | Intel Core i3-8100, 4C/4T @ 3.60 GHz | [measured-here] |
 | RAM | 15.9 GB | [measured-here] |
 | GPU | Intel UHD 630 — **no CUDA. All training is CPU-only.** | [measured-here] |
-| Disk C: | 128 GB NVMe SSD, **0 bytes free** | [measured-here] |
+| Disk C: | 128 GB NVMe SSD, **12.84 GB free (10.85 %)** after the 2026-09-09 cache cleanup that recovered 12.36 GB; it was at 0 bytes | [measured-here] `STORAGE_AUDIT.md` |
 | Disk D: / E: | 1 TB SATA HDD → 337 GB / 446 GB free | [measured-here] |
-| Ethernet | UP, **192.168.1.2/24**, internet reachable (pypi HTTP 200) | [measured-here] |
-| Wi-Fi | Realtek RTL8821CE 802.11ac — **adapter present, DISCONNECTED** | [measured-here] |
-| **ESP32 attached?** | **NO** — no `VID_303A` device enumerated; only legacy `COM1` (ACPI) | [measured-here] |
+| Ethernet | UP, **192.168.1.2/24**, gateway **192.168.1.1 reachable**, internet reachable | [measured-here] |
+| Wi-Fi | Realtek RTL8821CE — radio types **802.11 b/g/n** (2.4 GHz) **+ a/ac** (5 GHz); radio hardware+software ON but **DISCONNECTED**. `Hosted network supported: No` (legacy SoftAP unavailable; Mobile Hotspot uses WiFi-Direct and is untested) | [measured-here] `netsh wlan show drivers` |
+| **ESP32 attached?** | ✅ **YES, since 2026-09-09** — `USB\VID_303A&PID_1001` enumerated as USB Composite Device + USB Serial Device (**COM7**) + USB JTAG/serial debug unit, all `Status: OK`. Confirmed independently by `pio device list`. | **[measured-here]** |
 
 ### Networking implication for the demo
 
