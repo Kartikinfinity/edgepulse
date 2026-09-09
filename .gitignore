@@ -161,3 +161,6 @@ $RECYCLE.BIN/
 # The PROVENANCE - manifests, QA report, build config - is published to the
 # tracked dataset_manifest/ directory instead, because git cannot re-include
 # files inside an excluded directory.
+
+# pip cache + build logs redirected off C: during setup
+.pipcache/

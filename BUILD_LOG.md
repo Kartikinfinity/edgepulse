@@ -695,3 +695,81 @@ The 1.0 s / 49×13 input stands, and no architecture change is needed for Tier 1
 
 **Next.** Dataset Factory. The capture path, the QC gate and the keyword's fit to the window are
 all now evidence-backed.
+
+---
+
+## EXP-006 — Baseline KWS model: train, evaluate, quantise, and the real-audio failure
+
+**Date:** 2026-09-10 · **Scripts:** `training/train.py`, `training/evaluate.py`,
+`training/streaming_eval.py`, `training/export_tflite.py`
+**Full report:** `BASELINE_RESULTS.md`
+
+### Pre-declared pass bar
+
+1. Threshold chosen on **validation only**, by a rule fixed before any test
+   number was seen: lowest threshold with validation FA rate <= 1%.
+2. Streaming detection reported separately from clip classification (D-005).
+3. int8 parity bars: max |dP| < 0.05, correlation > 0.99, decision flips < 1%.
+
+### What changed since EXP-005
+
+* 15 further takes recorded (session `S_PILOT_03`); usable real utterances
+  14 -> **18**. Dataset rebuilt as `data/dataset_v2`, leakage gate **PASS**.
+* `count_macs()` fixed for Keras 3, which removed `layer.output_shape`. The old
+  code caught the AttributeError and returned **0**, which would have written a
+  fabricated `projected_device_ms` of 0.0 into every training record. It now
+  resolves both spellings and raises if it matches no layers.
+* `tools/record_session.py` now applies the **factory's own** acceptance rule
+  instead of a second, laxer one.
+
+### Result
+
+| | |
+|---|---|
+| Model | DS-CNN, 10,947 params, 3,291,744 MACs |
+| Training | 15 epochs (early stop), 4.7 min, best val acc 0.9363 |
+| Threshold | 0.900, from validation, applied once to test |
+| Validation | P 0.938 · R 0.583 · F1 0.719 · FA 0.0097 |
+| Test | P 0.000 · R **0.000** · FA 0.0100 |
+| Real INMP441 recall | validation 20.4% · **test 0.0% (0 of 54)** |
+| Synthetic TTS recall | 62.0% |
+| Streaming detections | **0 of 18 real recordings** |
+| FA / hour | 12.0 [95% CI 1.35-43.33], 2 events in 10 min |
+| Wake latency | not measurable - nothing detected |
+| int8 model | 25,896 bytes, fully integer, no float fallback |
+| int8 parity | **FAIL** on max drift 0.1238 (bar 0.05); correlation 0.99816 and 0.19% decision flips both pass |
+| Streaming vs batch MFCC | **0.0 exactly**, 12 golden cases |
+
+### Diagnosis
+
+Three hypotheses tested; two rejected by measurement.
+
+* **Level — rejected.** Gain sweep 0 to +30 dB moved median peak score 0.074 ->
+  0.189 and produced 0 detections at every step.
+* **Peak-normalisation mismatch — rejected.** Factory clips are
+  `peak_normalize(seg, -6.0)`; the device stream is not. Scoring the same
+  placements without normalisation gave median 0.120 vs 0.101. No effect.
+* **Synthetic-to-real domain gap — supported.** Median P(keyword) is 0.94 on
+  synthetic TTS and 0.10 on real audio of the same word. Train positives are
+  100% Piper TTS.
+
+The negative side is strong and independently useful: speech negatives and
+silence rejected 100%, near-homophones 97.3%, hard negatives 97.2%.
+
+### What this does NOT prove
+
+* Nothing here is speaker-independent - one speaker, one mic, one room.
+* The negative stream is concatenated clips, not continuous room audio.
+* FA/hour is a Poisson count over 10 minutes, not hours.
+* Host latency (1.94 ms float / 0.38 ms int8) is not device latency; the ~103 ms
+  figure is a projection from one prior-build measurement, not a measurement.
+* No code has run on the ESP32-S3.
+* int8 parity does not imply accuracy - it relates int8 to a float model that
+  does not detect real speech.
+
+### Verdict
+
+Pipeline **works end to end**: dataset -> features -> training -> evaluation ->
+streaming -> int8 export -> golden reference. The model **fails its purpose**.
+The blocking issue is real positive audio in training, and it is now measured
+rather than predicted.

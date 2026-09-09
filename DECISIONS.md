@@ -474,3 +474,66 @@ a statement about a speech synthesiser.
 - The cheapest improvement available is **more real utterances from the one speaker** (~8 min for
   +30, taking test n from 7 to ~20). More TTS renderings per voice would add nothing — that axis
   is already saturated.
+
+---
+
+## D-015 — Real speaker audio must enter TRAINING; the demo model is speaker-dependent
+
+**Date:** 2026-09-10 · **Status:** decided, acting on it next
+**Evidence:** EXP-006, `BASELINE_RESULTS.md`
+
+### Context
+
+D-014 reserved all real INMP441 audio for validation and test, with positive
+diversity coming from ~1,069 TTS voices. The reasoning was that 18 utterances
+from one speaker cannot buy speaker independence, and spending them on training
+would leave nothing honest to evaluate on.
+
+That reasoning was sound and the decision produced exactly the honest evaluation
+it was designed to produce. The evaluation says the model does not work:
+
+* real INMP441 clip recall — validation **20.4%**, test **0.0%** (0 of 54)
+* streaming detections on real recordings — **0 of 18**
+* median P(keyword) — **0.94** synthetic, **0.10** real
+
+Level and peak-normalisation were tested as alternative explanations and both
+were rejected by measurement (EXP-006). What remains is the synthetic-to-real
+domain gap, and no augmentation of TTS closes it.
+
+### Decision
+
+1. Real audio from the demo speaker **goes into training**.
+2. The resulting model is labelled **speaker-dependent** everywhere it is
+   reported. It is not, and will not be claimed to be, speaker-independent.
+3. One **entire recording session** is held out as the test set, which finally
+   makes the real-positive split **session-disjoint** - a control that has been
+   impossible until now because no second session had enough usable takes.
+4. TTS positives stay. They are what gives the negative side its strength
+   (near-homophones rejected 97.3%) and they carry phonetic variety no single
+   speaker provides.
+
+### Why this is not a retreat from D-014
+
+D-014's claim was about what TTS diversity *buys*: coverage of the keyword's
+phonetic neighbourhood. That claim survives - the near-homophone and hard-
+negative results are strong precisely because of it. What D-014 assumed and got
+wrong is that `mic_band_limit` plus noise and gain would carry a TTS-trained
+positive class across to a real microphone. It does not.
+
+### Cost
+
+Roughly 60-100 recorded takes, 15-25 minutes of one speaker's time. This is
+within the standing constraint that the plan must not require manually recording
+hundreds or thousands of utterances.
+
+The tool risk that wasted the previous three sessions is closed: `record_session.py`
+now applies the dataset factory's own acceptance rule at record time and names
+the reason for each rejection, agreeing with the factory on **64 of 64** takes
+recorded so far. The dominant failure it now reports live - **TOO QUIET**,
+26 of 30 and 8 of 15 takes - was previously invisible until dataset build time.
+
+### What would reverse this
+
+A measured demonstration that a TTS-trained positive class detects real speech
+on this microphone. EXP-006 is evidence against; anything claiming otherwise
+needs its own experiment, not an argument.

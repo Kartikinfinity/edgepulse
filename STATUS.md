@@ -1,10 +1,12 @@
 # STATUS.md
 
-**Last updated:** 2026-09-09 · **Phase:** **DATASET-FIRST RESTART**
+**Last updated:** 2026-09-10 · **Phase:** **BASELINE MEASURED — model fails on real audio**
 
-> **The supplied dataset was deprecated and removed from the project** (`DECISIONS.md` D-010,
-> `DATASET_RESET_AUDIT.md`). **There is no approved dataset and no selected keyword.**
-> **Next:** keyword selection, then dataset design — `DATASET.md` §5.
+> **A baseline DS-CNN has been trained, evaluated, quantised and measured end to end.**
+> The pipeline works. **The model does not** — it detects **0 of 18** real recordings of the
+> keyword and scores real audio at median **0.10** against **0.94** for synthetic TTS.
+> Full numbers: **`BASELINE_RESULTS.md`** · experiment record: `BUILD_LOG.md` EXP-006.
+> **Next:** record 60-100 real takes and retrain with real audio in TRAIN (**D-015**).
 
 **The repository is now machine-independent** (`DECISIONS.md` D-009). It can be cloned into
 any directory on Windows or Linux; all paths resolve through `config/paths.py`. Start a new
@@ -28,15 +30,33 @@ to end** (EXP-004). Port names and USB interfaces differ per board — never har
 | Cross-machine portability + handoff | ✅ complete (D-009) |
 | Machine setup / verification / health scripts | ✅ complete |
 | **Keyword selected** | ✅ **`Takshila`** — confirmed, binding (D-011) |
-| **Approved dataset** | ❌ **none — must be built from scratch** |
-| Raw recordings collected | ❌ none |
-| Python environment | ❌ not created (scripted: `scripts/setup.*`) |
-| Firmware skeleton | 🟡 `firmware/platformio.ini` committed; **no source yet** |
-| Feature pipeline | ❌ not written |
-| Evaluation harness | ❌ not written |
-| Model | ❌ none trained in this tree |
+| **Dataset** | ✅ `data/dataset_v2` — 20,926 clips, leakage gate **PASS** |
+| Raw recordings collected | 🟡 62 takes, **18 usable**, one speaker |
+| Python environment | ✅ `.venv` (Python 3.12 + TensorFlow 2.18 CPU) |
+| Firmware skeleton | 🟡 recorder firmware works; **no KWS firmware yet** |
+| Feature pipeline | ✅ `training/features.py`; streaming≡batch drift **0.0 exactly** |
+| Evaluation harness | ✅ clip + **streaming** (`training/evaluate.py`, `streaming_eval.py`) |
+| Model | 🟡 trained and measured — **fails on real audio** (EXP-006) |
+| int8 TFLite export | 🟡 25,896 B, fully integer; **parity bar FAILED** on max drift |
+| Golden host reference | ✅ `artifacts/golden/`, 12 cases |
 | On-device anything | ❌ nothing flashed in this tree |
 | Streaming / ASR / UI | ❌ no code exists |
+
+### The measured baseline (EXP-006)
+
+| | validation | test |
+|---|---:|---:|
+| precision | 0.938 | 0.000 |
+| recall | 0.583 | **0.000** |
+| F1 | 0.719 | 0.000 |
+| FA rate | 0.0097 | 0.0100 |
+| real INMP441 recall | 20.4 % | **0.0 %** (0 of 54) |
+
+Streaming: **0 of 18** detections · **12.0 FA/hour** [1.35–43.33] · latency not measurable.
+Negatives are strong: speech negatives and silence **100 %** rejected, near-homophones **97.3 %**.
+
+**Diagnosis (EXP-006):** synthetic-to-real domain gap. Level and peak-normalisation were both
+tested as alternative causes and **rejected by measurement**. Train positives are 100 % TTS.
 
 **Nothing has been measured on hardware in this tree.** Every hardware number currently in
 `HARDWARE.md` is marked `[prior-build]` and is pending re-verification in Phase A.
