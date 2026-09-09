@@ -91,3 +91,68 @@ pipeline) and Phase C (streaming evaluation harness) — none of which needs the
   when a POSIX path (`/e/...`) was passed to `C:\Python314\python`, which resolved it to
   `C:\e\...` on the full C: drive. Recovered 509 MB. **No user file was touched.**
   The trap is recorded in `CLAUDE.md` section 1.
+
+---
+
+## OPS-001 — Safe storage recovery and storage-strategy decision
+**Date:** 2026-09-09 · **Phase:** environment (SIH implementation halted by the user for this
+task) · **Status:** PASS
+
+**Objective.** Recover usable space on C: without touching anything personal or system-owned;
+decide whether the project can live on C: as one self-contained tree; locate the raw
+`Desktop\data` recording tree; verify the final filesystem and toolchain state.
+
+**Pre-declared pass bar.** (1) C: free space materially increased using only regenerable
+caches; (2) zero user documents, applications, Windows components, browser profiles, Recycle
+Bin contents, pagefile or restore configuration modified; (3) every tool still functional
+afterwards; (4) a storage decision justified by measured numbers, with the project on exactly
+one drive; (5) the raw-data question answered definitively.
+
+**Method.** Full audit first, no deletions (`STORAGE_AUDIT.md` §§1–9). Each cleanup target was
+identity-checked before removal — e.g. `npm config get cache` was run to confirm the npm cache
+path, and `Arduino15\staging\packages` was listed to confirm all 36 entries were extractable
+archives whose extracted form still exists in `Arduino15\packages`. Deletions used explicit
+paths only; no wildcard spanned a parent directory. pip and uv were cleared with their own
+documented commands where available.
+
+**Measurements.**
+
+| | bytes | GB |
+|---|---:|---:|
+| C: free before | 519,274,496 | 0.48 |
+| C: free after | 13,791,440,896 | **12.84** |
+| **Recovered** | **13,272,166,400** | **12.36** |
+
+By category: npm `_cacache`+`_logs` ~5.3 GB · pip cache 3.93 GB (pip reported 3,503 files) ·
+Arduino staging 2.03 GB (36 files) · PlatformIO `.cache` 0.68 GB · uv cache 0.37 GB · two named
+stale Temp staging dirs ~0.30 GB.
+
+Raw-data search across **all three fixed drives**, four independent methods: no directory named
+`data` under any Desktop, no directory whose name contains `solvani` outside the release, no
+directory matching the manifest's raw session names, no `noise_00*.wav` file. **The tree does
+not exist on this machine.**
+
+Storage decision arithmetic: project ≈ 12 GB + Windows headroom ≈ 15 GB = **≈ 27 GB required**
+against **12.84 GB available** ⇒ **~14 GB short** ⇒ project stays on `E:\sih2026`.
+
+**Post-state verification.** git 2.51.2 · Python 3.14.0 / 3.13.9 · pip 26.0.1 · npm 11.6.1 ·
+node v24.11.0 · PlatformIO Core 6.1.19 with `espressif32` and all 9 packages intact ·
+TensorFlow 2.20.0 + torch 2.8.0+cpu · `D:\sih-ml-env` TensorFlow 2.21.0 · `tools/analyze_manifests.py`
+reproduces its documented output · dataset 21,267 WAVs with all 18 per-split class counts
+matching `DATASET.md` §2 · `git fsck` clean, working tree clean, 13 tracked files.
+
+**Analysis.** The cleanup was worth 12.36 GB from caches alone, which both removes the acute
+0-bytes-free hazard and leaves every installed tool working. It does **not** change the storage
+decision: C: would still be left at under 1 GB after hosting the project, and the only paths to
+another 14 GB run through installed software or personal data. E: at 445.79 GB free is ~35× the
+project's projected lifetime footprint.
+
+**What this does NOT prove.**
+- Shadow-copy / System Restore usage on C: is **unmeasured** — `vssadmin` requires elevation.
+  There may be further reclaimable space there; changing it is out of scope by instruction.
+- No claim is made that C: is now "healthy"; 10.85 % free on a system volume is workable, not
+  comfortable, and it will refill as caches regenerate.
+- Nothing about the SIH build itself was advanced. No model, firmware, or feature code exists.
+
+**Next.** Await the user's explicit instruction before resuming the SIH build. When resumed,
+the first unblocked step is unchanged: `BUILD_PLAN.md` A1–A2, then Phases B and C.

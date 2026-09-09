@@ -43,12 +43,13 @@ The host's only live link is Ethernet at `192.168.1.2/24`, implying a router at
 `192.168.1.1`. The ESP32-S3 is **2.4 GHz only**. Needed: SSID + password of a 2.4 GHz network
 the host can also reach. Fallback: Windows Mobile Hotspot. **Blocks:** Phase G3+.
 
-### 🟠 B-4 — C: has 0 bytes free
-Measured 2026-09-09: 128 GB NVMe, 100 % full (509 MB was recovered during this session by
-deleting an artefact this session had created). Worked around by putting everything on E:
-(`DECISIONS.md` D-001), but it remains a live risk to the PlatformIO core install, pip, git
-and Windows itself. **Recommend the user free several GB.** Reclaimable without touching
-documents: `C:\Users\Menon\AppData\Local\pip` cache ≈ 3.66 GB.
+### 🟢 B-4 — C: free space — RESOLVED as far as is safely possible
+Was 0 bytes. A cache-only cleanup on 2026-09-09 recovered **12.36 GB**; C: now holds
+**12.84 GB free (10.85 %)**. Every tool was re-verified working afterwards (pip, npm,
+PlatformIO, git, TensorFlow, project scripts). C: remains ~14 GB short of the ~27 GB needed to
+host the project *and* keep Windows healthy, so the project stays on **E:** as one
+self-contained tree — `DECISIONS.md` D-001, `STORAGE_AUDIT.md` §12. Caches regenerate with
+use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets tight.
 
 ---
 
@@ -62,7 +63,7 @@ documents: `C:\Users\Menon\AppData\Local\pip` cache ≈ 3.66 GB.
 | R-4 | Training is **CPU-only** (Intel UHD 630, no CUDA) | Fine for a small DS-CNN; rules out large architecture searches |
 | R-5 | E: is a HDD | Cache features to `.npz`; do not re-read 21k WAVs per epoch |
 | R-6 | Idle CPU will be ~48 % in Phase 1 | Declared Phase-2 debt, displayed on the dashboard (`DECISIONS.md` D-008) |
-| R-7 | The raw uncut recordings (`Desktop/data/`) do not exist on this machine | Positives cannot be re-cut at new offsets; `DATASET.md` section 9 |
+| R-7 | The raw uncut recordings (`Desktop/data/`) are **confirmed absent from all three drives** — four independent searches, `STORAGE_AUDIT.md` §11 | Positives cannot be re-cut at new offsets; `DATASET.md` §9. `D:\speech_commands` (5.37 GB, Speech Commands v0.02) *is* present and usable for negatives/background |
 
 ---
 

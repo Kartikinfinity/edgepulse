@@ -23,8 +23,11 @@
 
 ## 1. Where things live — and why not on C:
 
-**C: has 0 bytes free** (128 GB NVMe, measured 2026-09-09). D: and E: are partitions of a
-1 TB SATA HDD with 337 GB / 446 GB free. Therefore:
+**C: is a 128 GB NVMe with 12.84 GB free** (10.85 %) after the 2026-09-09 cleanup that recovered
+12.36 GB from developer caches; it was at **0 bytes** before. D: and E: are partitions of a
+1 TB SATA HDD with 337 GB / 446 GB free. The project needs ~12 GB and Windows needs ~15 GB
+headroom on its system drive, so C: is still ~14 GB short — the project therefore stays on E:
+as one self-contained tree. Full working in `STORAGE_AUDIT.md` §12.
 
 | What | Path |
 |---|---|
