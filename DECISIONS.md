@@ -433,3 +433,44 @@ statement, not a number: at a true 0.5 FA/h, 3 h gives a 95 % CI of 0.10–1.83 
 **No speaker-independence claim may be made**, and every reported rate must carry its CI and
 observation duration. `RESEARCH_DATASET_ROADMAP.md` is the documented answer to "what would you
 do with more time".
+
+---
+
+## D-014 — Positive-class diversity comes from ~1,090 TTS voices; real audio is reserved for evaluation
+
+**Date:** 2026-09-10 · **Status:** active · Amends `DEMO_DATASET_SPEC.md` (which assumed 6
+speakers) · Research: `docs/DATASET_RESEARCH.md` · Sizing: `DATASET_SIZE_RATIONALE.md`
+
+**Decision.** With **one** available human speaker, the positive class is generated from
+**~1,090 distinct Piper TTS voices**, and the **14 real INMP441 recordings are reserved for
+validation and test**. No real keyword audio enters training.
+
+**Why this way round.** The instinct is to train on the real recordings because they are real.
+That is exactly wrong here: 14 utterances from one speaker cannot teach voice invariance, and
+spending them on training would leave nothing honest to evaluate against. Their value is
+entirely as *evidence*, so they are spent there.
+
+**Why TTS is defensible for training.** microWakeWord — the only mainstream project solving this
+exact problem — generates its positives entirely from Piper. Three of the models available carry
+real advantages for **this** keyword:
+- **`en_US-l2arctic-medium` (24 speakers)** — L2-ARCTIC is a **non-native English** corpus
+  including Hindi-L1 speakers. That is the closest synthetic proxy to our actual demo population.
+- **Indic voices** (hi/te/ml/mr) natively realise the **क्ष conjunct**; an en_US voice given
+  "Takshila" produces the anglicised /tæk.sɪ.lə/, which is variant V7 rather than the canonical
+  form.
+- **`en_US-libritts_r-medium` (904 speakers)** — bulk voice diversity from one 78 MB file.
+
+**What is explicitly NOT claimed.** TTS voices are not speakers. **No speaker-independence
+claim is possible from this dataset**, and the factory enforces the boundary in code: synthetic
+positives are routed away from the test split, so a detection rate can never accidentally become
+a statement about a speech synthesiser.
+
+**Consequences.**
+- Test positives rest on **~7 independent human utterances** ⇒ ~**±35 pp** on a clip-level
+  detection rate. **The headline number must therefore come from continuous audio**, where the
+  denominator is time, not utterance count.
+- Domain gap is handled by band-limiting all synthetic and public audio toward the INMP441
+  response, and by mixing real room tone recorded on the actual device.
+- The cheapest improvement available is **more real utterances from the one speaker** (~8 min for
+  +30, taking test n from 7 to ~20). More TTS renderings per voice would add nothing — that axis
+  is already saturated.

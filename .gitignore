@@ -148,3 +148,16 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 *.lnk
+
+# =========================================================================
+# DATASET FACTORY
+# -------------------------------------------------------------------------
+# Generated audio and downloaded TTS voice models are NOT committed. The
+# dataset is reproducible from tools/dataset_factory/config.py + the manifests,
+# so committing ~740 MB of derived audio would be waste, not provenance.
+# =========================================================================
+# Everything under data/ is ignored by the blanket rule above: downloaded TTS
+# voice models (~670 MB), generated audio (~740 MB), and raw recordings.
+# The PROVENANCE - manifests, QA report, build config - is published to the
+# tracked dataset_manifest/ directory instead, because git cannot re-include
+# files inside an excluded directory.

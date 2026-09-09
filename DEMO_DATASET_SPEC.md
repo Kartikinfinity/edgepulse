@@ -15,6 +15,28 @@
 
 ---
 
+## 0a. AMENDMENT 2026-09-10 — one speaker, not six
+
+> **This spec assumed 6 human speakers. Exactly one is available.** That is not a smaller
+> version of the same plan — it changes which techniques are viable, so the positive strategy
+> was rebuilt around **synthetic voice diversity** with real audio reserved for evaluation.
+>
+> | | This spec assumed | Actually built |
+> |---|---|---|
+> | Human speakers | 6 | **1** |
+> | Positive source | real recordings | **~1,090 Piper TTS voices** (incl. L2-ARCTIC non-native English + native Indic) |
+> | Real positives | ~240 | **14 recordings** → validation/test only |
+> | Test positives | 40 (±9.5 pp) | **~7 independent utterances (±35 pp)** |
+> | Speaker-disjoint split | yes | **impossible** — substitute is session-disjoint |
+>
+> **Everything methodological in this document still holds** — partial-keyword negatives,
+> offset-sampling-is-not-augmentation, recorded-not-mixed test conditions, the leakage
+> assertions, the metadata schema, the QC thresholds. Only the *source* of positive diversity
+> changed, and the honesty obligations got stricter, not looser.
+>
+> Design and evidence: `docs/DATASET_RESEARCH.md` · sizing: `DATASET_SIZE_RATIONALE.md` ·
+> implementation: `DATASET_FACTORY.md` · decision: `DECISIONS.md` D-014.
+
 ## 0. Time budget
 
 Of the 12–16 h build, **data work gets ~3.5 h**. Everything below is sized to that.

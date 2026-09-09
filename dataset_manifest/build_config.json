@@ -1,0 +1,32 @@
+{
+  "dataset_version": "takshila-demo-1.0",
+  "keyword": "Takshila",
+  "master_seed": 20260910,
+  "smoke": false,
+  "targets": {
+    "positive_tts": 5400,
+    "positive_real": null,
+    "near_homophone": 4200,
+    "hard_negative_partial": 2200,
+    "speech_negative": 8000,
+    "background": 2400,
+    "silence": 700
+  },
+  "voice_models": [
+    "en_US-libritts_r-medium",
+    "en_GB-vctk-medium",
+    "en_US-l2arctic-medium",
+    "en_US-arctic-medium",
+    "mr_IN-google-medium",
+    "hi_IN-pratham-medium",
+    "hi_IN-priyamvada-medium",
+    "hi_IN-rohan-medium",
+    "te_IN-maya-medium",
+    "ml_IN-arjun-medium"
+  ],
+  "distinct_tts_voices": 1069,
+  "speech_commands_present": true,
+  "clips": 20804,
+  "leakage_pass": true,
+  "build_seconds": 655.1
+}
