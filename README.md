@@ -42,9 +42,9 @@ assumes a drive letter — see [`config/paths.py`](config/paths.py).
 
 ## Status
 
-**Hardware knowledge, architecture, documentation and portability are complete and
-retained. There is no dataset, no keyword, no implementation code, and nothing has been
-measured on hardware in this repository.**
+**Hardware knowledge, architecture, documentation and portability are complete and retained,
+and the wake keyword is settled. There is no dataset, no implementation code, and nothing has
+been measured on hardware in this repository.**
 
 Next task: **recording protocol, then one measured pilot session** — the full data
 specification is [`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md) §§13–15.
