@@ -41,7 +41,8 @@ Snapshot date: **2026-09-09** · Regenerate the live view with
 | `ENVIRONMENT_SETUP.md` | Windows + Linux machine setup |
 | `EXPERIMENT_STATE.md` | Experiment ledger — what has been measured and what has not |
 | `DECISIONS.md` | D-001…D-011, irreversible decisions with reasoning |
-| `KEYWORD_SELECTION.md` | **Keyword research + the full dataset specification (§§13–15)** |
+| `KEYWORD_SELECTION.md` | Keyword research: 18 candidates, scoring, phonetics, licence audit |
+| `DATASET_SPEC.md` | **The frozen dataset build specification — 37 sections** |
 | `BUILD_LOG.md` | Append-only log with pre-declared pass bars |
 | `STORAGE_AUDIT.md` | Historical record of the original machine's storage work |
 
@@ -102,7 +103,8 @@ hardware measurements taken in this tree.**
 | Phase | Description | State |
 |---|---|---|
 | **0.1** | **Keyword selection** | DONE — **`Takshila` (D-011)** |
-| **0.2–0.5** | **Dataset design, protocol, collection, build** | 🔴 **not started; blocks B–F** |
+| **0.2** | **Dataset specification** | DONE — **`DATASET_SPEC.md`, frozen** |
+| **0.3–0.5** | **Recorder, pilot, collection, build** | blocked on **B-1 (pin map)**; blocks B–F |
 | A1 | Python venv | ⚪ scripted, not yet run on the target machine |
 | A2 | PlatformIO skeleton | 🟡 `platformio.ini` committed; no `src/` yet |
 | A3 | Apply authoritative pin map | 🔴 **blocked — pin map not supplied** |

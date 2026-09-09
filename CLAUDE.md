@@ -68,8 +68,9 @@ set `SIH_UPLOAD_PORT` in `.env`.
 ```
 DATASET STATUS: NOT YET CREATED
 KEYWORD:        "Takshila" - CONFIRMED (D-011)
-NEXT OBJECTIVE: write the recording protocol, run ONE pilot session and
-                measure it, then collect the dataset.
+DATASET SPEC:   COMPLETE - DATASET_SPEC.md (frozen, 37 sections)
+NEXT OBJECTIVE: resolve B-1 (pin map) -> build recorder -> ONE measured
+                pilot session -> collect.
 ```
 
 **Keyword facts you will need constantly.** `Takshila` = 3 syllables, 7 phonemes,
@@ -210,7 +211,11 @@ pio device monitor
 1. ~~Keyword selection~~ ✅ **DONE — `Takshila` (D-011).** Do not reopen it.
 2. ~~Dataset design specification~~ ✅ **DONE — `KEYWORD_SELECTION.md` §§13–15.** Use it;
    do not redesign it.
-3. **Recording protocol + ONE pilot session, measured** — the current task.
+3. ~~Dataset specification~~ ✅ **DONE — `DATASET_SPEC.md`, frozen.** Build from it; do not
+   redesign it.
+4. **Resolve B-1 (pin map)** — now the critical-path blocker: ≥70 % of positives must be
+   recorded on the real INMP441, so collection cannot start without it.
+5. **Recorder + ONE measured pilot session** before recruiting anyone — the current task.
 4. Collection — **keeping every raw session**, speaker IDs recorded from the first file.
 5. Curate, build, version and fingerprint the dataset.
 6. **Only then**: features, the streaming evaluation harness (before any model), training.

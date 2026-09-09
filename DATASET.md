@@ -8,9 +8,12 @@ KEYWORD:
     "Takshila"  /takshiila/  "tuk-SHEE-laa"  - CONFIRMED, binding
     (KEYWORD_SELECTION.md, DECISIONS.md D-011)
 
+DATASET SPEC:
+    COMPLETE - DATASET_SPEC.md (37 sections, design frozen)
+
 NEXT OBJECTIVE:
-    Write the recording protocol, then run ONE pilot session and measure it
-    before recruiting any speaker.
+    Resolve blocker B-1 (pin map), build the recorder, then run ONE pilot
+    session and measure it before recruiting any speaker.
 ```
 
 **Last updated:** 2026-09-09 · **Status:** reset · See `DATASET_RESET_AUDIT.md` for the audit
@@ -111,10 +114,11 @@ In order. **None of it has started, and none of it may be skipped.**
    phonetic and hard-negative analysis, the ISRO/SIH and ESP32/WakeNet analyses, and the
    licence audit. **The full data specification is §§13–15 of that document** — treat it as
    the input to step 2, not as something to redo.
-2. **Dataset design specification**, written *before* any recording: target speaker count,
-   utterances per speaker, environments, distances, positional-offset strategy, hard-negative
-   word list, background sources, split policy (speaker-disjoint), and the licence position
-   for any external corpus.
+2. ~~**Dataset design specification**~~ **DONE — `DATASET_SPEC.md`.** 37 sections covering
+   classes, acoustic conditions, format, preprocessing, augmentation, splits, leakage controls,
+   QC, metadata, licensing, sizes, evaluation-only sets, the hard-negative test set and the
+   long-form continuous false-alarm protocol. **Treat it as the build input, not as something
+   to redesign.**
 3. **Recording protocol** — prompts, sample rate and format, session structure, and the
    quality bar for accepting or rejecting a take.
 4. **Collection**, keeping raw sessions.

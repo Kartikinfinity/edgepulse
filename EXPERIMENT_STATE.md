@@ -124,7 +124,8 @@ A figure swept and judged on the same audio is **provisional**, never a result.
 | Next | Depends on |
 |---|---|
 | ~~EXP-001 — keyword selection~~ | **PASS — `Takshila` (D-011)** |
-| **EXP-002** — recording protocol + ONE pilot session, measured with `tools/audio_probe*.py` | nothing — **can start now** |
-| **EXP-003** — full collection against `KEYWORD_SELECTION.md` §14 | EXP-002 |
+| ~~EXP-002 — dataset specification~~ | **PASS — `DATASET_SPEC.md`, frozen** |
+| **EXP-003** — recorder firmware + ONE measured pilot session | **blocked: pin map (B-1)** |
+| **EXP-004** — full collection against `DATASET_SPEC.md` | EXP-003 pilot passing |
 | **EXP-004** — validate the authoritative pin map against `HARDWARE.md` §3 | **blocked: pin map (B-1)** |
 | **EXP-005** — board identity readout (A4) | board attached |

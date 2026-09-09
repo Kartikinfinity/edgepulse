@@ -378,3 +378,74 @@ accept/reject quality bar, the `session.json` schema) and run **one pilot sessio
 with `tools/audio_probe.py` and `tools/audio_probe_bands.py`, **before recruiting any speaker.**
 The data specification is already fixed in `KEYWORD_SELECTION.md` §§13–15 and is an input, not
 something to redesign.
+
+---
+
+## EXP-002 — Dataset design specification
+**Date:** 2026-09-09 · **Phase:** dataset-first Phase 0.2 · **Status:** PASS (design frozen;
+**nothing collected, nothing trained**)
+
+**Objective.** Produce a complete, buildable specification for a production-quality custom KWS
+dataset for `Takshila` on the ESP32-S3 + INMP441, designed for continuous always-listening
+operation, before any audio is recorded.
+
+**Pre-declared pass bar.** (1) All 37 required sections present and specific enough to build
+from; (2) the dataset supports both utterance-level and continuous-stream metrics — FRR, FA/h,
+precision, recall, F1, DET, latency, and robustness by speaker/environment/distance/noise;
+(3) leakage controls enumerated as testable assertions, not intentions; (4) test set never
+augmented, never speaker-shared, never used for threshold tuning; (5) a long-form continuous
+protocol capable of exposing false activations over hours; (6) every external source licence-
+checked; (7) sizes given as both target and honest minimum.
+
+**Method.** Derived every technical parameter from the fixed feature pipeline in
+`ARCHITECTURE.md` §3 rather than choosing freely, and every phonetic decision from
+`KEYWORD_SELECTION.md`. Cross-checked class design against the two predecessor failure modes
+recorded in D-005.
+
+**Key design decisions and their evidence.**
+
+| Decision | Why |
+|---|---|
+| **Clip = exactly 1.000 s (16,000 samples)** | derived: 49 frames × 20 ms hop + 25 ms window = 985 ms, rounded |
+| **Offset sampling is NOT augmentation** — applied to train, val AND test | it is the distribution the device sees; treating it as augmentation is what produced the predecessor's 4.6× optimism |
+| **Windows holding 25–99 % of the keyword are `hard_negative/partial`** | the single most important rule; their absence caused a deployed model to fire on 49.7 % of realistic windows vs 10.7 % on its clip set `[prior-build]` |
+| **6-way `class` label, 3-way `model_target`** | lets FA against near-homophones specifically be reported without retraining |
+| **Test noise and reverb are RECORDED, not mixed** | otherwise the test measures our RIR/noise set, not the world |
+| **`Takshashila` (V9) is a NEGATIVE, not a positive variant** | it is a different word; admitting it widens the boundary for no gain |
+| **EV-2: 3 training speakers re-recorded ≥2 weeks later** | the only justified same-speaker crossing, and it exists because held-out windows from the same sessions left a predecessor's false rate optimistic by ~12× `[prior-build]` |
+| **CS-INDIC: 4 h of Indic speech** | क्ष occurs naturally in Indian languages — keyword-specific FA exposure no other candidate would have needed |
+| **Children excluded** | consent and ethics cannot be properly discharged here; the resulting gap is declared, not hidden |
+| **ESC-50 avoided** | CC BY-NC 3.0 is the only genuine restriction in the source set; own recordings replace it |
+
+**Sizes.** Target **30 speakers × 48 positives = 1,440 raw**, ~39,800 clips, ~15 GB with raw
+sessions, plus **20 h** CS-VALIDATE / 8 h CS-WILD / 4 h CS-INDIC / 1 h CS-DETECT. Minimum
+viable **15 speakers**, **≥120 held-out test positives**, **10 h** continuous audio.
+
+**Statistical honesty, computed before measuring.** Test-positive count drives the CI:
+120 → ±5.4 pp, 240 → ±3.8 pp, against the deprecated corpus's 17 → ±20 pp. And for false
+alarms, at a true 0.5 FA/h: 10 h gives a 95 % CI of **0.16–1.17 FA/h**, 20 h gives
+**0.24–0.92**, 40 h gives 0.31–0.77. **10 h resolves an order of magnitude, not a number.**
+Every FA/h figure this project reports must carry its CI and its observation duration.
+
+**Analysis.** Two things drove the design more than anything else. First, the predecessor's
+failure was an *evaluation* failure twice over, so the spec spends its complexity on partial
+negatives, offset sampling, recorded-not-mixed test conditions, and ten enumerated leakage
+assertions that fail the build. Second, the one advantage this project has over the industrial
+bar — Espressif needs 500 speakers and must generalise from hi-fi mics to cheap MEMS parts —
+is that **we can record on the deployment microphone itself**. That advantage is only real if
+the INMP441 is wired, which makes **B-1 the critical path for the entire project**, not merely
+for firmware.
+
+**What this does NOT prove.**
+- **No audio has been recorded.** Every number here is a target, not a measurement.
+- The 21-minute session estimate and the ≤10 % reject target are **predictions**; the pilot
+  (EXP-003) is what tests them.
+- The fractional-factorial condition design is a judgement about what is collectable in 21
+  minutes, not an optimal experimental design.
+- Speaker recruitment feasibility (30 speakers, ≥6 L1 backgrounds) is assumed, not secured.
+- Nothing here validates the keyword. `Takshila`'s false-alarm behaviour remains unmeasured.
+
+**Next — EXP-003.** Resolve **B-1**, wire the INMP441, complete A4/A5 bring-up, build
+`firmware/recorder/` and `tools/record_session.py`, then run **ONE pilot session**. Exit bar:
+format uniform, RMS in range, zero dropouts, visible keyword-onset spread, ≤10 % rejects.
+**Do not recruit before the pilot passes.**

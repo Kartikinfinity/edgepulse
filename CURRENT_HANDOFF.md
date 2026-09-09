@@ -31,12 +31,15 @@ python scripts/health_check.py        # shows phase progress and blockers
 # 6. then start the exact next task named below. Nothing before it.
 ```
 
-**The exact next task is the recording protocol, then ONE measured pilot session.**
+**The exact next task is to resolve blocker B-1 (the pin map), then build the recorder and
+run ONE measured pilot session.**
 
-The keyword is settled (**`Takshila`**, D-011) and the full data specification already
-exists in `KEYWORD_SELECTION.md` §§13–15 — **use it, do not redesign it**. Run and measure
-a single pilot session before recruiting any speaker. Hardware bring-up (Phase A) is
-dataset-independent and may run in parallel once the pin map arrives.
+The keyword is settled (**`Takshila`**, D-011) and the dataset is **fully specified and frozen**
+in `DATASET_SPEC.md` — **build from it, do not redesign it.**
+
+**B-1 is now the critical path for the whole project**, not just for firmware: ≥70 % of positive
+utterances must be recorded through the real INMP441 (`DATASET_SPEC.md` §35), and re-recording
+30 speakers later is not feasible. Order: pin map → wire → A4/A5 → recorder → pilot → collect.
 
 **Do not train anything before the streaming evaluation harness exists.** The reason is in
 `DECISIONS.md` D-005 and it is the single most expensive lesson this project has.
@@ -103,8 +106,8 @@ which derives the root from its own file location.
 ```
 DATASET STATUS: NOT YET CREATED
 KEYWORD:        "Takshila" - CONFIRMED, binding (D-011)
-NEXT OBJECTIVE: recording protocol -> one measured pilot -> collection.
-                Full spec: KEYWORD_SELECTION.md 13-15.
+DATASET SPEC:   COMPLETE and FROZEN - DATASET_SPEC.md (37 sections)
+NEXT OBJECTIVE: B-1 pin map -> recorder -> ONE measured pilot -> collect.
 ```
 
 The previously supplied corpus was **deprecated and removed from the project**

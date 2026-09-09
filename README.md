@@ -46,9 +46,9 @@ assumes a drive letter — see [`config/paths.py`](config/paths.py).
 and the wake keyword is settled. There is no dataset, no implementation code, and nothing has
 been measured on hardware in this repository.**
 
-Next task: **recording protocol, then one measured pilot session** — the full data
-specification is [`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md) §§13–15.
-Open blockers: **B-6** no dataset · **B-1** pin map · **B-3** Wi-Fi. (B-5 keyword: resolved.)
+Next task: **resolve the pin map (B-1), build the recorder, run one measured pilot session.**
+The dataset is fully specified in [`DATASET_SPEC.md`](DATASET_SPEC.md) — build from it.
+Open blockers: **B-1** pin map (now critical path) · **B-6** no dataset yet · **B-3** Wi-Fi.
 Live detail in [`STATUS.md`](STATUS.md).
 
 ## Documents
@@ -62,7 +62,8 @@ Live detail in [`STATUS.md`](STATUS.md).
 | [`BUILD_PLAN.md`](BUILD_PLAN.md) | Phases A–I with per-phase exit bars |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design and every justified deviation |
 | [`DATASET.md`](DATASET.md) | **Dataset status (NOT YET CREATED) and the plan to build one** |
-| [`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md) | **Keyword research + full dataset specification** |
+| [`KEYWORD_SELECTION.md`](KEYWORD_SELECTION.md) | Keyword research, scoring and licence audit |
+| [`DATASET_SPEC.md`](DATASET_SPEC.md) | **The frozen dataset build specification (37 sections)** |
 | [`DATASET_RESET_AUDIT.md`](DATASET_RESET_AUDIT.md) | Audit behind the dataset reset |
 | [`GIT_HISTORY_DATASET_PURGE.md`](GIT_HISTORY_DATASET_PURGE.md) | Why no history rewrite is needed |
 | [`HARDWARE.md`](HARDWARE.md) | Board, microphone, GPIO constraints, toolchain |

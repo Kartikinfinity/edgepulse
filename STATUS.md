@@ -87,9 +87,16 @@ FakeWake, Schönherr et al., Amazon's wake-word patent and Indian English phonol
 3 syllables · 7 phonemes · 4 manner classes · 5 places of articulation.
 **Changing it later invalidates every recording made.** Do not reopen it.
 
-### 🔴 B-6 — No approved dataset
-`DATASET.md` status is **NOT YET CREATED**. No recordings have been collected.
-**Blocks:** feature pipeline, evaluation harness, training, quantisation, on-device KWS.
+### 🟡 B-6 — No dataset yet — **fully specified, collection blocked on B-1**
+`DATASET_SPEC.md` is complete: 37 sections, design frozen. Target **30 speakers × 48 positive
+utterances**, ~39,800 clips, plus **20 h** of continuous false-alarm audio. Minimum viable is
+15 speakers / 120 held-out test positives (±5.4 pp).
+
+**Collection cannot start until B-1 is resolved** — ≥70 % of positives must be recorded through
+the INMP441 on the ESP32-S3, and the mic is not wired. Re-recording 30 speakers later is not
+feasible, so recording them once, correctly, is the only option. `DATASET_SPEC.md` §19, §35.
+
+**Blocks:** feature pipeline, evaluation harness, training, on-device KWS.
 **Does NOT block:** hardware bring-up, firmware skeleton, server/UI scaffolding.
 
 ### 🟢 B-4 — C: free space — RESOLVED as far as is safely possible
@@ -131,8 +138,10 @@ use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets t
 ## Immediate next actions
 
 1. ~~Keyword selection~~ ✅ done — `Takshila` (D-011).
-2. **Recording protocol, then ONE measured pilot session** — before recruiting any speaker.
-   The data specification already exists: `KEYWORD_SELECTION.md` §§13–15 (**B-6**).
+2. ~~Dataset specification~~ ✅ done — **`DATASET_SPEC.md`**, 37 sections, frozen.
+3. **Resolve B-1 (pin map)** — now the critical-path blocker for the whole dataset.
+4. **Build the recorder** (`firmware/recorder/` + `tools/record_session.py`), then run **ONE
+   pilot session** and measure it. Do not recruit before the pilot passes.
 3. **In parallel, hardware-side and dataset-independent:** environment setup (A1), the
    PlatformIO skeleton (A2), and — once the pin map arrives — bring-up A3–A6.
 4. **Still needed from the user:** the authoritative pin map (**B-1**) and the 2.4 GHz Wi-Fi
