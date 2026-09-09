@@ -52,24 +52,45 @@ Use this to **validate** the pin map when it arrives.
 | 47, 48 | ✅ Available at 3.3 V on N16R8 (1.8 V only on R16V) | [datasheet] footnote *c* |
 | 1,2,4–18,21,38–42 | ✅ Generally free (38–42 also carry JTAG MTMS/MTDI/MTDO/MTCK) | [datasheet] |
 
-## 4. Wiring — **UNCONFIRMED, awaiting authoritative map**
+## 4. Wiring — ✅ **CONFIRMED 2026-09-09**
 
-The user has stated an exact pin mapping **will be supplied separately and is authoritative**.
-Until then nothing here may be treated as the wiring.
+**Supplied by the user as the verified physical wiring of the actual hardware.** Validated
+pin-by-pin against §3 below: **no conflict**. Encoded once, authoritatively, in
+`firmware/include/hardware_config.h` — nothing else in the project may define a GPIO number.
 
-Prior build used, and validated against every reserved range above:
+| INMP441 | ESP32-S3 | Role | §3 check |
+|---|---|---|---|
+| SCK | **GPIO 6** | I²S bit clock (BCLK), ESP32 → mic | ✅ free |
+| WS | **GPIO 5** | I²S word select (LRCLK), ESP32 → mic | ✅ free |
+| SD | **GPIO 4** | I²S data in, mic → MCU | ✅ free |
+| VDD | **3V3** | supply — 1.8–3.3 V part, abs max 3.63 V. **Never 5 V** | ✅ correct |
+| GND | GND | ground | — |
+| L/R | **GND** | LOW ⇒ mic drives the **LEFT** channel | ✅ matches `I2S_CHANNEL_FMT_ONLY_LEFT` |
 
-| INMP441 | ESP32-S3 | Role |
-|---|---|---|
-| SCK | GPIO 6 | I²S bit clock (BCLK) |
-| WS | GPIO 5 | I²S word select (LRCLK) |
-| SD | GPIO 4 | I²S data in (mic → MCU) |
-| VDD | 3V3 | supply |
-| GND | GND | ground |
-| L/R | GND | selects LEFT channel |
+None of GPIO 4/5/6 touches the Octal PSRAM (35–37), the flash bus (26–32), the strapping pins
+(0/3/45/46), USB (19/20), UART0 (43/44), or the non-existent 22–25. All three are in the
+documented free set (1, 2, 4–18, 21, 38–42).
 
-Status: **[prior-build] + [UNCONFIRMED for this build].** On receipt of the authoritative map,
-check each pin against §3 and record the result in `BUILD_LOG.md` as EXP-001.
+This map is **identical to the prior build's wiring**, which means that build's I²S evidence
+(sample rate, bit alignment, noise spectrum) applies to the same electrical configuration —
+though it still requires re-measurement here before being quoted.
+
+### ⚠ Serial interface — corrected by measurement, 2026-09-09
+
+**This board enumerates through a CH343 USB-UART bridge, not the ESP32-S3's native
+USB-Serial/JTAG.** Measured directly during bring-up:
+
+| Observation | Evidence |
+|---|---|
+| Port present | **COM8**, "USB-Enhanced-SERIAL CH343" |
+| Native USB-Serial/JTAG (`VID_303A`) | **not enumerated** |
+| ROM bootloader on COM8 @ 115200 | ✅ clean (`ESP-ROM:esp32s3-20210327`, `SPI_FAST_FLASH_BOOT`) |
+| Sketch `Serial` output with `ARDUINO_USB_CDC_ON_BOOT=1` | ❌ **never arrived** — bound to the unconnected native USB CDC |
+| Fix | **`ARDUINO_USB_CDC_ON_BOOT=0`** ⇒ `Serial` binds to UART0 (GPIO 43/44) → CH343 → host |
+
+Recorded in `firmware/platformio.ini` with the reasoning. **The earlier COM5/COM7 +
+`VID:PID 303A:1001` records elsewhere in this document describe a different physical
+connection** and must not be used to configure a build.
 
 ## 5. Audio front-end facts to re-verify
 

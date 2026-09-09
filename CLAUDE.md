@@ -71,7 +71,9 @@ KEYWORD:        "Takshila" - LOCKED (D-011, sanity-checked)
 ENGINE:         custom NN on TFLite Micro + ESP-NN (D-012)
 DATASET:        TIER 1 = DEMO_DATASET_SPEC.md (6 speakers, build now)
                 TIER 2 = RESEARCH_DATASET_ROADMAP.md (post-demo)
-NEXT OBJECTIVE: resolve B-1 -> wire INMP441 -> record TEST speaker first.
+HARDWARE:       audio path PROVEN (EXP-004): 16,001.50 Hz, mono, PCM16,
+                bit alignment measured. Board on COM8 via CH343 bridge.
+NEXT OBJECTIVE: user records the speech pilot -> QC -> Dataset Factory.
 ```
 
 **Keyword facts you will need constantly.** `Takshila` = 3 syllables, 7 phonemes,
@@ -216,10 +218,13 @@ pio device monitor
    now; `RESEARCH_DATASET_ROADMAP.md` is post-demo and does not block.
 4. ~~Engine selection~~ ✅ **DONE — TFLM + ESP-NN** (D-012). Pipeline verified, not assumed:
    `KWS_ENGINE_DECISION.md` §4.
-5. **Resolve B-1 (pin map)** — critical path for the whole build; no INMP441 recording without
-   it.
-6. **Record the TEST speaker first and quarantine it.** Start ambient capture and Piper
+5. ~~Resolve B-1~~ ✅ **done — audio path proven** (EXP-004, `HARDWARE.md` §4).
+6. **Finish the speech pilot** (needs a human voice), QC it, then Dataset Factory:
+   **record the TEST speaker first and quarantine it.** Start ambient capture and Piper
    negative generation early — both unattended.
+
+**Recorder:** `python tools/record_session.py --verify` · `--record <label> --duration <ms>` ·
+`python tools/audio_qc.py <dir> --plot`. Pins live only in `firmware/include/hardware_config.h`.
 4. Collection — **keeping every raw session**, speaker IDs recorded from the first file.
 5. Curate, build, version and fingerprint the dataset.
 6. **Only then**: features, the streaming evaluation harness (before any model), training.

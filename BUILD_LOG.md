@@ -521,3 +521,103 @@ slow speech. Neither was visible without doing the arithmetic.
 **Next.** Resolve **B-1 (pin map)** — now the critical path for the entire build — wire the
 INMP441, verify the bit shift (QC-8), then **record the test speaker first and quarantine it**.
 Start CS-WILD ambient capture and Piper hard-negative generation immediately; both run unattended.
+
+---
+
+## EXP-004 — Hardware capture bring-up: INMP441 → I²S → PCM16 → host
+**Date:** 2026-09-09 · **Phase:** A3–A5 · **Status:** **PASS** — audio path proven on real
+hardware. **No model trained, no dataset collected.**
+
+**Objective.** Build and verify the real audio acquisition path end to end, using only the
+user-supplied pin map, and prove it reliable enough to collect a dataset with.
+
+**Pre-declared pass bar.** 16 kHz · mono · PCM16 · correct I²S channel · bit alignment verified
+**not assumed** · no unexplained dropouts · no significant clipping · usable SNR · recording
+duration accurate · valid WAV files · QC script passes · recorder repeatable.
+
+**Pin map — validated, not trusted.** Supplied: SCK→GPIO 6, WS→GPIO 5, SD→GPIO 4, VDD→3V3,
+L/R→GND. Checked pin-by-pin against `HARDWARE.md` §3: none touches Octal PSRAM (35–37), flash
+(26–32), strapping (0/3/45/46), USB (19/20), UART0 (43/44) or the non-existent 22–25; all three
+are in the documented free set. **NO CONFLICT.** Identical to the prior build's wiring, which
+was carried as UNCONFIRMED and is now **CONFIRMED**. Encoded once in
+`firmware/include/hardware_config.h`.
+
+### Measurements — all on the real board
+
+| Quantity | Measured | Reference |
+|---|---|---|
+| Chip | ESP32-S3, 2 cores @ 240 MHz | matches |
+| Flash | **16,777,216 B** (16 MB) | matches N16R8 |
+| PSRAM | **8,386,231 B**, `psramFound()`=1 | **exactly matches `[prior-build]`** |
+| Heap total / free | 393,716 / 360,360 B | prior 394,924 / 370,680 |
+| `i2s_init` | **OK** with GPIO 6/5/4, `ONLY_LEFT`, Philips, 32-bit slots | — |
+| **Sample rate** | **16,001.50 Hz — +0.0094 %** | **prior 16,001.60 Hz (+0.010 %)** |
+| Rate reproducibility | identical over 3 s / 5 s / 10 s runs, **0 overruns** | — |
+| **Bit alignment** | `or_all = 0xFFFFFE00`, **low 8 bits never set in 20,480 samples**, lowest bit set = 9 | **24-in-32 left-justified confirmed** |
+| Firmware footprint | RAM 21,980 B (6.7 %), Flash 286,141 B (4.4 %) | — |
+| Capture accuracy | **80,000 / 80,000 samples (+0.00 %)**, ×2 | — |
+| Transport integrity | 157 blocks, **0 lost, 0 overruns**, ×2 | — |
+| Ambient RMS / peak | −29.3 / −18.4 dBFS, **0 clipped** | usable headroom |
+| Ambient SNR | ~13 dB | idle room |
+| DC offset | +0.00079 / −0.00038 FS | under the 0.002 limit |
+| Longest zero run | **0.1 ms** | limit 20 ms |
+| Spectrum (idle) | **95.6 % of energy < 100 Hz** | prior 64.6 % — same LF-dominated character; the **125 Hz mel floor discards it** |
+
+### Two faults found and fixed — both would have poisoned the dataset
+
+**1. Serial output went nowhere.** `pio device list` reported no `VID_303A`, yet the board
+flashed successfully on **COM8** as a **CH343 USB-UART bridge**. With
+`ARDUINO_USB_CDC_ON_BOOT=1`, `Serial` binds to the ESP32-S3's *native* USB CDC — which this unit
+does not expose. Probing COM8 at 921600 returned only `0x00`/`0x80`; at 115200 it returned clean
+ROM boot text, proving the board ran but the sketch's output was routed to an unconnected
+interface. **Fix: `ARDUINO_USB_CDC_ON_BOOT=0`** ⇒ `Serial` → UART0 (GPIO 43/44) → CH343 → host.
+GPIO 43/44 do not collide with the mic pins. `HARDWARE.md` §4 corrected; the earlier
+COM5/COM7 + `303A:1001` records describe a **different physical connection**.
+
+**2. The first sample-rate measurement read +2.004 %.** That is 200× the prior build's deviation
+and would have been a genuine alarm. It was **my measurement, not the clock**: `cmdRate` began
+timing immediately after `i2s_zero_dma_buffer()`, while the DMA ring
+(8 × 256 = 2,048 samples = 128 ms) still held audio captured *before* t₀, which read back
+instantly. Excess samples measured 966 ≈ 0.47 × ring depth — consistent with a partly-filled
+ring. **Fix: drain the ring before timing** (also applied to `REC`). Re-measured:
+**16,001.50 Hz across three run lengths, identical every time.**
+
+Independently written firmware landing within **0.1 Hz** of the prior build's figure is strong
+mutual corroboration of both.
+
+### Exit criteria
+
+| Criterion | Result |
+|---|---|
+| 16 kHz verified | ✅ 16,001.50 Hz measured, +0.0094 % |
+| Mono verified | ✅ 1 channel, `ONLY_LEFT`, L/R=GND |
+| PCM16 verified | ✅ 16-bit signed, 2 B/sample |
+| Correct I²S channel | ✅ LEFT, signal present |
+| Bit alignment verified | ✅ **measured**, low 8 bits never set ⇒ `>>16` |
+| No unexplained dropouts | ✅ 0 lost blocks, 0 overruns, longest zero run 0.1 ms |
+| No significant clipping | ✅ 0 clipped samples |
+| Usable SNR | ✅ ~13 dB idle; speech will sit far above |
+| Duration accurate | ✅ +0.00 % on 5.000 s, twice |
+| Valid WAV files | ✅ RIFF/WAVE headers, declared size == actual, 80,000 frames |
+| QC script passes | ✅ and **fails 6/6 deliberately corrupted files** — the gate can fail |
+| Recorder repeatable | ✅ identical results across repeats |
+
+**Analysis.** The two faults are the whole value of this session. Both were silent: the board
+looked dead when it was running, and the clock looked broken when the measurement was. Either
+would have been discovered *after* recording speakers, and the second would have been
+"discovered" as a wrong number rather than a wrong method. The QC tool was validated against
+deliberately corrupted audio **before** being trusted on real audio — clipping, DC offset,
+100 ms dropout, wrong rate, stereo and an over-shift were all caught, which is the same
+discipline D-005 demands of the evaluation harness.
+
+**What this does NOT prove.**
+- **No speech has been recorded.** Ambient only — I cannot speak into the microphone. The
+  speech, `Takshila`, quiet/loud and near/far pilot captures still require the user.
+- The 95.6 % sub-100 Hz idle spectrum is characteristic of the part but has **not** been checked
+  against a calibrated reference; it is reported as observed.
+- SNR ~13 dB is an idle-room figure from a crude decile estimator, not a lab measurement.
+- Nothing about MFCC, the model, or inference timing was touched.
+- One board, one room, one session.
+
+**Next.** User records the remaining pilot items (§ report), then QC gates them. Only after that
+does the Dataset Factory phase begin.

@@ -12,8 +12,9 @@ machine from **`CURRENT_HANDOFF.md`**, which has a NEXT SESSION START block.
 
 **Keyword settled:** **`Takshila`** (D-011). The dataset can now be specified and collected.
 
-**Board status:** the ESP32 was attached on **COM7 on the original machine** (B-2 resolved
-there). Port names differ per machine — never hard-code one.
+**Board status:** attached on **COM8 via a CH343 USB-UART bridge** — *not* the native
+USB-Serial/JTAG the earlier COM5/COM7 records assumed. The audio capture path is **proven end
+to end** (EXP-004). Port names and USB interfaces differ per board — never hard-code one.
 
 ---
 
@@ -44,12 +45,19 @@ there). Port names differ per machine — never hard-code one.
 
 ## Blockers
 
-### 🔴 B-1 — Authoritative pin map not yet supplied
-The user stated the exact INMP441 to ESP32-S3 pin mapping would be provided separately and is
-authoritative. Until it arrives, `HARDWARE.md` section 4 holds only the prior build's wiring,
-marked UNCONFIRMED. **Blocks:** A3, and therefore all of Phase A5+ and Phase F.
-**Validation ready:** `HARDWARE.md` section 3 has the full constraint table (GPIO 35/36/37 are
-tied to Octal PSRAM on this module and must not be used; 0/3/45/46 are strapping pins).
+### 🟢 B-1 — Pin map — RESOLVED 2026-09-09, and the audio path is PROVEN
+Supplied map **SCK→GPIO 6 · WS→GPIO 5 · SD→GPIO 4 · VDD→3V3 · L/R→GND**, validated pin-by-pin
+against `HARDWARE.md` §3 — **no conflict** — and encoded in
+`firmware/include/hardware_config.h`. Identical to the prior build's wiring, now confirmed.
+
+**Bring-up complete (EXP-004).** Measured on the real board: **16,001.50 Hz (+0.0094 %)**,
+mono/PCM16, **bit alignment verified by measurement** (low 8 bits never set in 20,480 samples ⇒
+24-in-32 left-justified, shift 16), **0 dropped blocks, 0 overruns, 0 clipped samples**,
+5.000 s captures accurate to **+0.00 %**, valid WAV output, QC gate passing.
+
+Two silent faults found and fixed: `Serial` was routed to an unconnected native USB CDC (this
+board uses a **CH343 bridge on COM8**), and the first rate reading of +2.004 % was a DMA-ring
+measurement bias, not the clock.
 
 ### 🟢 B-2 — ESP32 attached — RESOLVED 2026-09-09
 `USB\VID_303A&PID_1001` now enumerates as USB Composite Device + **USB Serial Device (COM7)**
@@ -147,10 +155,11 @@ use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets t
 3. ~~Engine selection~~ ✅ done — **TFLM + ESP-NN** (D-012); ESP-SR unavailable, microWakeWord
    is the declared T+6 h fallback.
 4. ~~Dataset tiering~~ ✅ done — **`DEMO_DATASET_SPEC.md`** is the build target (D-013).
-5. **Resolve B-1 (pin map)** — the critical-path blocker for the entire build.
-6. **Wire INMP441, verify the bit shift (QC-8), record the TEST speaker first** and quarantine
-   it. Start CS-WILD ambient capture and Piper hard-negative generation early — both run
-   unattended and cost no wall-clock.
+5. ~~Resolve B-1~~ ✅ done — pin map validated, **audio path proven** (EXP-004).
+6. **Finish the pilot:** record speech / `Takshila` / quiet / loud / near / far, then gate with
+   `tools/audio_qc.py`. **This needs a voice at the microphone.**
+7. Then Dataset Factory: record the **TEST speaker first** and quarantine it; start CS-WILD
+   ambient capture and Piper hard-negative generation early — both run unattended.
 3. **In parallel, hardware-side and dataset-independent:** environment setup (A1), the
    PlatformIO skeleton (A2), and — once the pin map arrives — bring-up A3–A6.
 4. **Still needed from the user:** the authoritative pin map (**B-1**) and the 2.4 GHz Wi-Fi
