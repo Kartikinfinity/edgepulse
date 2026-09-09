@@ -23,9 +23,9 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -Dev
 python scripts/verify_setup.py
 ```
 
-Then fetch the dataset (`DATASET_SETUP.md`) and re-run `verify_setup.py`.
-If that prints **READY**, you are done. The rest of this document is the
-manual route and the troubleshooting.
+If that prints **READY**, you are done. There is no dataset to fetch — building one is the
+current project task (`DATASET.md`). The rest of this document is the manual route and the
+troubleshooting.
 
 ---
 
@@ -188,8 +188,8 @@ cp .env.example .env          # Linux/macOS
 Copy-Item .env.example .env   # Windows PowerShell
 ```
 
-`.env` is git-ignored and holds everything machine-specific: dataset location,
-serial port, server ports, and (later) Wi-Fi credentials. Every value is
+`.env` is git-ignored and holds everything machine-specific: dataset and recordings
+locations, serial port, server ports, and (later) Wi-Fi credentials. Every value is
 optional — the defaults are relative to the repository root.
 
 Check what resolved:
@@ -201,21 +201,23 @@ python config/paths.py
 > **Secrets rule.** Wi-Fi SSID/password and any token go in `.env` only.
 > They must never reach Git, `platformio.ini`, or a committed header.
 
-## 7. Dataset — **REQUIRED for Phases B–E**
+## 7. Dataset — **none to install**
 
-See `DATASET_SETUP.md`. Short version: place `solvani_kws_release` at
-`<repo>/data/solvani_kws_release` (or set `SIH_DATASET_ROOT`), then:
-
-```bash
-python scripts/verify_dataset.py           # spot-check, seconds
-python scripts/verify_dataset.py --full    # every file, ~90 s
 ```
+DATASET STATUS: NOT YET CREATED
+```
+
+The previously supplied corpus was deprecated and removed (`DECISIONS.md` D-010). **There is
+nothing to download or place.** Building a dataset is the current project task — see
+`DATASET.md`.
+
+When recordings start, they go to `<repo>/data/recordings` (`SIH_RECORDINGS_ROOT`) and the
+built dataset to `<repo>/data/dataset` (`SIH_DATASET_ROOT`). Neither enters Git.
 
 ## 8. Verification — **REQUIRED**
 
 ```bash
-python scripts/verify_setup.py     # Python, packages, git, pio, layout, dataset
-python scripts/verify_dataset.py   # dataset integrity vs committed manifest
+python scripts/verify_setup.py     # Python, packages, git, pio, project layout
 python scripts/health_check.py     # git state, phase progress, blockers, disk
 ```
 
@@ -231,16 +233,17 @@ There are **no tests yet** — `tests/` does not exist. Phase B1's exit bar
 includes the first one (a synthetic-tone unit test for the feature pipeline).
 pytest's configuration already lives in `pyproject.toml`.
 
-## 10. Reproducing the dataset analysis — **OPTIONAL**
+## 10. Audio measurement tools — **RECOMMENDED once recording starts**
+
+Both are dataset-agnostic: they take a directory and assume nothing about layout.
 
 ```bash
-python tools/analyze_manifests.py     # structure, class counts, leakage check
-python tools/audio_probe.py           # format audit, envelope
-python tools/audio_probe_bands.py     # band-limited keyword localisation
+python tools/audio_probe.py <dir>         # format uniformity, duration, RMS/peak, clipping
+python tools/audio_probe_bands.py <dir>   # speech-band energy; where the word sits in the clip
 ```
 
-Every figure quoted in `DATASET.md` comes from these three scripts. They are
-read-only and work from any working directory.
+Run them **during** collection, not after training. Catching a format, level or centring
+problem in a session is cheap; discovering it after training is not.
 
 ## 11. Hardware bring-up — **REQUIRED before Phase F**
 
@@ -255,8 +258,8 @@ power anything until it is supplied and validated against `HARDWARE.md` §3.
 |---|---|
 | `pip install tensorflow` finds no candidate | Python 3.14. Recreate the venv with 3.13. |
 | `ModuleNotFoundError: config` | Run scripts as `python scripts/x.py` from anywhere; they bootstrap `sys.path` themselves. If you copied a script out of the repo, it will not work. |
-| `verify_dataset.py` says dataset root missing | Dataset not placed, or `SIH_DATASET_ROOT` wrong. `python config/paths.py` shows what resolved. |
+| `config/paths.py` shows a dataset path that does not exist | Expected — no dataset exists yet (D-010). |
 | `pio device list` shows nothing | Board unplugged, a charge-only USB cable, or (Linux) missing dialout membership. |
 | `Activate.ps1 cannot be loaded` | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1`, or `Set-ExecutionPolicy -Scope Process RemoteSigned`. |
 | Out of disk during install | Redirect `PIP_CACHE_DIR`; TensorFlow needs ~600 MB plus wheel cache. |
-| Checksum mismatches after copying the dataset | Copied over a lossy path (cloud sync, zip round-trip). Re-extract from the original archive. |
+| Recordings look wrong after copying | Never move audio through a lossy path (cloud sync that rewrites, zip round-trip with re-encode). Keep raw sessions pristine. |

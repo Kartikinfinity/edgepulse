@@ -93,7 +93,12 @@ def flag(name: str, default: bool = False) -> bool:
 # --------------------------------------------------------------------------
 # Directories
 # --------------------------------------------------------------------------
-DATASET_ROOT: Path = path_setting("SIH_DATASET_ROOT", "data/solvani_kws_release")
+# NOTE: there is currently NO approved dataset. The previous corpus was
+# deprecated and removed from the project (see DATASET.md and DECISIONS.md
+# D-010). DATASET_ROOT points at the directory where the NEW dataset will be
+# built; it does not exist yet, and code must not assume it does.
+DATASET_ROOT: Path = path_setting("SIH_DATASET_ROOT", "data/dataset")
+RECORDINGS_ROOT: Path = path_setting("SIH_RECORDINGS_ROOT", "data/recordings")
 ARTIFACTS_DIR: Path = path_setting("SIH_ARTIFACTS_DIR", "artifacts")
 DOCS_DIR: Path = PROJECT_ROOT / "docs"
 EXPERIMENTS_DIR: Path = DOCS_DIR / "experiments"
@@ -103,18 +108,15 @@ SERVER_DIR: Path = PROJECT_ROOT / "server"
 UI_DIR: Path = PROJECT_ROOT / "ui"
 TOOLS_DIR: Path = PROJECT_ROOT / "tools"
 SCRIPTS_DIR: Path = PROJECT_ROOT / "scripts"
-MANIFEST_DIR: Path = PROJECT_ROOT / "dataset_manifest"
 
-# Dataset variants (see DATASET.md)
-DATASET_FULL: Path = DATASET_ROOT / "dataset_full"
-DATASET_BALANCED: Path = DATASET_ROOT / "dataset_balanced"
-
+# Split names are a conventional default. Class names and any variant scheme
+# belong to the dataset design, which has not been done yet - do not hard-code
+# a class list here until DATASET.md defines one.
 SPLITS: tuple[str, ...] = ("train", "validation", "test")
-CLASSES: tuple[str, ...] = ("positive", "negative", "background")
-VARIANTS: tuple[str, ...] = ("dataset_full", "dataset_balanced")
 
 # --------------------------------------------------------------------------
-# Optional external corpora (present on the original machine, not required)
+# Optional external corpora, e.g. a public negative/background source.
+# Nothing requires these. They are candidate material for the new dataset.
 # --------------------------------------------------------------------------
 SPEECH_COMMANDS_ROOT_RAW: str | None = setting("SIH_SPEECH_COMMANDS_ROOT")
 SPEECH_COMMANDS_ROOT: Path | None = (
@@ -133,27 +135,14 @@ ASR_SERVER_PORT: int = int(setting("SIH_ASR_SERVER_PORT", "8765"))
 DASHBOARD_PORT: int = int(setting("SIH_DASHBOARD_PORT", "8080"))
 
 
-def dataset_variant(name: str) -> Path:
-    """Return the root of a dataset variant, validating the name."""
-    if name not in VARIANTS:
-        raise ValueError(f"unknown dataset variant {name!r}; expected one of {VARIANTS}")
-    return DATASET_ROOT / name
-
-
-def manifest_csv(variant: str, split: str) -> Path:
-    """Path to one manifest CSV, e.g. dataset_full/manifests/train.csv."""
-    if split not in SPLITS:
-        raise ValueError(f"unknown split {split!r}; expected one of {SPLITS}")
-    return dataset_variant(variant) / "manifests" / f"{split}.csv"
-
-
 def describe() -> str:
     """Human-readable summary, used by the verification scripts."""
     lines = [
         f"project root      : {PROJECT_ROOT}",
         f".env present      : {ENV_FILE.is_file()}",
         f"dataset root      : {DATASET_ROOT}",
-        f"dataset present   : {DATASET_ROOT.is_dir()}",
+        f"dataset present   : {DATASET_ROOT.is_dir()}  (none approved yet - see DATASET.md)",
+        f"recordings root   : {RECORDINGS_ROOT}",
         f"artifacts dir     : {ARTIFACTS_DIR}",
         f"upload port       : {UPLOAD_PORT or '(auto-detect)'}",
     ]

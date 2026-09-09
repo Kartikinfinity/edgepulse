@@ -1,13 +1,12 @@
 # EXPERIMENT_STATE.md
 
-The experiment ledger: what has been measured **in this repository**, what has
-not, and which numbers came from somewhere else.
+The experiment ledger: what has been measured **in this repository**, what has not, and which
+numbers came from somewhere else.
 
-`BUILD_LOG.md` holds the full records with their pre-declared pass bars. This
-file is the index and, more importantly, the honest statement of what is
-**still unmeasured**.
+`BUILD_LOG.md` holds the full records with their pre-declared pass bars. This file is the index
+and, more importantly, the honest statement of what is **still unmeasured**.
 
-Last updated: 2026-09-09
+**Last updated:** 2026-09-09 — **reset with the dataset** (`DECISIONS.md` D-010).
 
 ---
 
@@ -15,90 +14,69 @@ Last updated: 2026-09-09
 
 | ID | Title | Type | Status | Record |
 |---|---|---|---|---|
-| **EXP-000** | Discovery and project bootstrap | discovery | PASS | `BUILD_LOG.md` |
-| **OPS-001** | Safe storage recovery + storage-strategy decision | operational | PASS | `BUILD_LOG.md` |
-| **OPS-002** | Cross-machine portability and handoff preparation | operational | PASS | `BUILD_LOG.md` |
+| EXP-000 | Discovery and project bootstrap | discovery | PASS — **dataset findings VOIDED by D-010** | `BUILD_LOG.md` |
+| OPS-001 | Safe storage recovery + storage-strategy decision | operational | PASS | `BUILD_LOG.md` |
+| OPS-002 | Cross-machine portability and handoff preparation | operational | PASS | `BUILD_LOG.md` |
+| OPS-003 | Dataset reset and active-context purge | operational | PASS | `BUILD_LOG.md` |
 
-**Zero ML experiments. Zero hardware measurements. No model has been trained
-in this repository.**
+**Zero ML experiments. Zero hardware measurements. No model has ever been trained in this
+repository.** `docs/experiments/` is empty.
 
-`docs/experiments/` is empty and awaits the first real experiment record.
+## 2. What HAS been measured here, and still counts
 
-## 2. What HAS been measured here
-
-All from EXP-000, reproducible with `tools/analyze_manifests.py`,
-`tools/audio_probe.py` and `tools/audio_probe_bands.py`.
-
-### Dataset structure
+Only environment and toolchain facts survive the reset. Everything else in EXP-000 was a
+measurement **of the deprecated corpus** and is out of scope.
 
 | Measurement | Value |
 |---|---|
-| Total WAVs | 21,267 (+18 CSV/Markdown = 21,285 files, 685,589,976 B) |
-| Format uniformity | 100 % of a 1,500-file random sample: mono / 16 kHz / 16-bit / exactly 16,000 frames |
-| Files missing vs manifests | 0 |
-| **Leakage: `source_id` spanning splits** | **0 / 2,387** |
-| **Leakage: `original_source` spanning splits** | **0 / 2,387** |
-| Unique positive recordings | **110** (77 train / 16 validation / **17 test**) |
-| Positive speakers | **1** (`speaker_01`, 100 %) |
-| Positive environments | 2 — `fan` (60), `classroom` (50) |
-| Augmentation inflation | ×7.2 (110 recordings → 790 clips) |
-| Phonetic hard negatives | 10 unique TTS phrases; 3 hardest are val/test-only |
+| Host (original machine) | i3-8100 4C/4T, 15.9 GB RAM, **no CUDA**, Windows 11 Pro 26200 |
+| Toolchain | PlatformIO 6.1.19 · `espressif32@7.1.1` · Arduino core 2.0.17 · **ESP-IDF 4.4** |
+| Python / ML | Python 3.13.9 · TensorFlow 2.20.0 · torch 2.8.0+cpu; Keras train + int8 TFLite export smoke-tested |
+| I²S API available | legacy `driver/i2s.h` only — no `driver/i2s_std.h` in IDF 4.4 |
+| Board presence | `VID:PID 303A:1001` enumerated on COM7 (original machine). **Presence only** — nothing flashed, no chip readout |
 
-### Dataset acoustics
+## 3. VOIDED by the dataset reset
 
-| Measurement | Value |
-|---|---|
-| Keyword active span (300–3400 Hz, 110 unaugmented positives) | ~545 ms |
-| Mean lead-in / trail-out | 235 ms / 221 ms |
-| Peak-energy bin spread | std 5.1 bins = **±255 ms** — loosely centred, real positional spread |
-| Speech-band (300–3400 Hz) energy fraction | positive **0.561** · negative 0.662 · background **0.538** |
-| Clipping | 4 of 110 unaugmented positives contain a full-scale sample |
-| RMS across positives | 0.034 – 0.485, mean 0.131 |
+Every dataset measurement previously recorded here — clip counts, format uniformity, split
+leakage, unique-recording counts, speaker distribution, keyword position within the window,
+speech-band energy fractions, RMS and clipping statistics — described the **deprecated
+corpus**.
 
-> The positive-vs-background speech-band gap of **0.023** is what forced
-> `DECISIONS.md` D-008: an energy-only VAD separates almost nothing here.
+**They are out of scope and may not be quoted**, as background, as a baseline, or as
+justification for a design choice (`DECISIONS.md` D-010). The techniques that produced them
+survive in `tools/audio_probe.py` and `tools/audio_probe_bands.py`, both now dataset-agnostic,
+and must be re-run against the new dataset once it exists.
 
-### Host environment (original machine only — will differ on yours)
-
-Intel i3-8100 4C/4T · 15.9 GB RAM · **no CUDA** · Windows 11 Pro 26200 ·
-Python 3.13.9 · TensorFlow 2.20.0 · torch 2.8.0+cpu · PlatformIO 6.1.19 ·
-`espressif32@7.1.1` · Arduino core 2.0.17 · ESP-IDF 4.4.
-
-### Hardware presence (original machine, OPS-001/transition check)
-
-ESP32-S3 enumerated as `VID:PID 303A:1001`, `SER=E0:72:A1:D7:20:24`, on
-**COM7**. Presence only — **nothing was flashed and no chip readout was done**.
-
-## 3. What has NOT been measured — the honest list
+## 4. What has NOT been measured — the honest list
 
 Nothing below has a number in this repository. Do not quote one.
 
 | Area | Status |
 |---|---|
-| Board identity (chip rev, flash, PSRAM, heap) verified on *this* board | ❌ not measured — task **A4** |
+| **Keyword selection criteria and choice** | ❌ not started — the current task |
+| **Dataset: any statistic at all** | ❌ no dataset exists |
+| Board identity verified on *this* board (chip rev, flash, PSRAM, heap) | ❌ not measured — task **A4** |
 | Actual I²S sample rate | ❌ not measured — task **A5** |
 | 24-in-32 bit alignment, clipping, noise spectrum | ❌ not measured — task **A5** |
 | Host↔device MFCC parity | ❌ not measured — task **B4** |
 | Clip-level classification accuracy | ❌ no model exists |
-| **Streaming detection rate** | ❌ no harness, no model |
+| **Streaming detection rate** | ❌ no harness, no model, no data |
 | **False activations per hour** | ❌ never measured |
-| **Wake-word latency** (keyword end → decision → first packet → ASR) | ❌ no firmware, no server |
+| **Wake-word latency** | ❌ no firmware, no server |
 | Inference time on device | ❌ not measured |
 | Tensor arena / SRAM / flash footprint | ❌ not measured |
 | Idle CPU % | ❌ not measured |
-| Speaker-independent performance | ❌ **unmeasurable with this dataset** |
+| Speaker-independent performance | ❌ requires a speaker-disjoint test split, which requires the dataset |
 | Far-field / distance robustness | ❌ not measured |
 | ASR decode time / real-time factor | ❌ not measured |
-| Power consumption | ❌ not measured |
-| Long-run stability | ❌ not measured |
+| Power consumption, long-run stability | ❌ not measured |
 
-## 4. Numbers carried over from the PRIOR build — `[prior-build]`
+## 5. Numbers carried over from the PRIOR build — `[prior-build]`
 
-These come from a **different project** (`C:\Users\Menon\OneDrive\Desktop\SIH 2026`,
-keyword **"Sentinel"**, 19 experiments, 29 commits) on the same hardware. They
-are kept because they are real hardware measurements and they shaped this
-project's decisions. **They are not results of this project.** Every one must be
-re-measured before it is quoted.
+From a **different project** (keyword **"Sentinel"**, 19 experiments) on the same hardware.
+Real hardware measurements that shaped this project's decisions. **They are not results of this
+project** and must be re-measured before being quoted. Unaffected by the dataset reset — they
+were never measurements of the deprecated corpus.
 
 | Measurement | Prior value | Used to justify |
 |---|---|---|
@@ -112,40 +90,40 @@ re-measured before it is quoted.
 | Measured sample rate | 16,001.60 Hz (+0.010 %) | A5's expected value |
 | Noise spectrum | 64.6 % of energy < 100 Hz | 125 Hz mel floor |
 | Clip test set said 10.7 % false-fire; sliding windows measured **49.7 %** | 4.6× optimism | **D-005** |
-| False-activation rate optimism vs natural speech | ~**12×** | **D-005** |
-| Hard-negative mining: Speech Commands share of false positives | 0.14 % | D-004 — more public negatives will not help |
+| False-activation optimism vs natural speech | ~**12×** | **D-005** |
+| Hard-negative mining: public negatives' share of false positives | 0.14 % | more public negative speech does not help |
 
-## 5. The five measures this project must never conflate
+## 6. The five measures this project must never conflate
 
-Stated here because collapsing them is exactly how the prior build produced
-three misleading results in a row.
+Stated here because collapsing them is exactly how a predecessor produced three misleading
+results in a row. **This survives the dataset reset unchanged.**
 
 | # | Measure | Definition | Reported as |
 |---|---|---|---|
-| 1 | **Clip-level classification** | accuracy/precision/recall on centred 1.0 s clips | **secondary diagnostic only**, always labelled |
-| 2 | **Streaming detector** | sliding windows over continuous audio at the real hop, with the real smoothing rule → **detections per spoken keyword** | **the headline metric** |
-| 3 | **False-trigger behaviour** | **false activations per hour** on audio where the keyword is never spoken, *fresh* and never used for tuning | separately, always |
+| 1 | **Clip-level classification** | accuracy on centred, complete-word clips | **secondary diagnostic only**, always labelled |
+| 2 | **Streaming detection** | sliding windows over continuous audio at the real hop, real smoothing rule → **detections per spoken keyword** | **the headline metric** |
+| 3 | **False-trigger behaviour** | **false activations per hour** on audio where the keyword is never spoken, *fresh*, never used for tuning | separately, always |
 | 4 | **Wake-word latency** | keyword end → decision → first packet → server receipt → ASR final | the SIH-graded number |
-| 5 | **Real-world robustness** | other speakers, distances, rooms, noise | currently **unmeasurable** — say so |
+| 5 | **Real-world robustness** | other speakers, distances, rooms, noise | only claimable with a speaker-disjoint test split |
 
 A figure swept and judged on the same audio is **provisional**, never a result.
 
-## 6. Rules for the next experiment
+## 7. Rules for the next experiment
 
 1. Pre-declare the pass bar **before** running. `BUILD_LOG.md` has the template.
 2. One change per experiment.
 3. Record what the experiment does **not** prove — that section is mandatory.
-4. Sweep an operating point on a SWEEP set, validate on a disjoint VALIDATE set.
+4. Sweep on a SWEEP set, validate on a disjoint VALIDATE set.
 5. Re-verify anything tagged `[prior-build]` before quoting it.
-6. If a result looks surprisingly good, suspect the evaluation before the model.
-   That instinct has been right every single time on this project.
+6. **Never quote a figure from the deprecated corpus**, for any purpose.
+7. If a result looks surprisingly good, suspect the evaluation before the model.
 
-## 7. Next experiments, in order
+## 8. Next experiments, in order
 
 | Next | Depends on |
 |---|---|
-| **EXP-001** — validate the authoritative pin map against `HARDWARE.md` §3 | **blocked: pin map (B-1)** |
-| **EXP-002** — board identity readout (A4) | board attached |
-| **EXP-003** — I²S capture + sample-rate measurement (A5) | EXP-001 |
-| **EXP-004** — feature pipeline determinism + synthetic-tone unit test (B1) | nothing — **can start now** |
-| **EXP-005** — streaming evaluation harness, must be able to fail (C) | EXP-004 |
+| **EXP-001** — keyword selection: criteria defined, candidates evaluated, choice recorded | nothing — **can start now** |
+| **EXP-002** — dataset design specification | EXP-001 |
+| **EXP-003** — recording protocol trial: one pilot session, measured with `tools/audio_probe*.py` | EXP-002 |
+| **EXP-004** — validate the authoritative pin map against `HARDWARE.md` §3 | **blocked: pin map (B-1)** |
+| **EXP-005** — board identity readout (A4) | board attached |

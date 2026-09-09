@@ -77,9 +77,9 @@ compile_commands.json
 # =========================================================================
 # DATASET AND LARGE GENERATED ARTIFACTS
 # -------------------------------------------------------------------------
-# The 21,267 WAVs are NOT in Git by design. dataset_manifest/ carries the
-# counts and SHA-256 checksums so another machine can prove it has the right
-# data -- see DATASET_SETUP.md.
+# Audio never enters Git. Raw recordings and the built dataset both live under
+# data/ and stay out of the repository; a fingerprint (counts + checksums) will
+# be committed once a dataset exists -- see DATASET.md.
 # =========================================================================
 data/
 artifacts/

@@ -23,6 +23,15 @@ Date · Phase · Status: PASS | FAIL | PARTIAL | INCONCLUSIVE
 
 ## EXP-000 — Discovery and project bootstrap
 **Date:** 2026-09-09 · **Phase:** discovery · **Status:** PASS
+**⚠ ALL DATASET FINDINGS BELOW ARE VOID — see OPS-003 / `DECISIONS.md` D-010.**
+
+> The corpus these measurements describe was **deprecated and removed from the project**.
+> The clip counts, split counts, leakage results, speaker distribution, keyword-position and
+> band-energy figures below are **out of scope** and may not be quoted for any purpose —
+> not as a result, not as a baseline, not as background.
+>
+> This entry is retained **unedited** because it is a dated measurement record and editing it
+> would falsify the log. The *host and toolchain* facts in it remain valid.
 
 **Objective.** Establish, from the supplied files and the actual machine, what is
 authoritative, what is proposed, and what genuinely blocks implementation — before writing
@@ -224,3 +233,69 @@ The portability rule governs code and instructions, not history.
 - No SIH implementation was started. No model, no firmware, no server, no UI.
 
 **Next.** Await explicit authorisation to push, then to begin `BUILD_PLAN.md` A1 → A2 → B → C.
+
+---
+
+## OPS-003 — Dataset reset and active-context purge
+**Date:** 2026-09-09 · **Phase:** direction change (SIH implementation still not started)
+**Status:** PASS
+
+**Objective.** Remove the previously supplied KWS corpus from the ACTIVE project — not merely
+ignore it — so that it cannot influence training, validation, testing, benchmarking,
+architecture, preprocessing, statistics, augmentation design, keyword selection, conclusions,
+documentation or recommendations. Restate the project as dataset-first.
+
+**Pre-declared pass bar.** (1) Every tracked file whose sole purpose was that corpus is gone
+from the active tree; (2) no active code or configuration resolves to it; (3) no active
+document treats it as the dataset; (4) no stale artifact can become the new baseline; (5)
+general SIH, hardware, architecture and methodology knowledge is preserved; (6) any Git history
+question is analysed and reported, with **no destructive rewrite performed**; (7) a re-scan
+finds no surviving active reference.
+
+**Method.** Full inventory first, no modifications — `DATASET_RESET_AUDIT.md`. Each reference
+was classified as *project configuration* (fix), *reusable capability* (rewrite), or
+*historical record* (leave, because editing it would falsify a dated measurement).
+
+**Measurements.**
+
+| Item | Result |
+|---|---|
+| Tracked files before → after | 35 → 31 |
+| Files removed (old-dataset-only) | 6 — `dataset_manifest/` ×2, `DATASET_SETUP.md`, `verify_dataset.py`, `generate_dataset_manifest.py`, `analyze_manifests.py` |
+| Files rewritten to be dataset-agnostic | 2 — `tools/audio_probe.py`, `tools/audio_probe_bands.py` |
+| Shared docs/config updated | 14 |
+| **Dataset binaries ever committed** | **none** — verified across all refs |
+| Largest blob in entire history | `CHECKSUMS.sha256`, 2.67 MB of **text** |
+| `.git` size | 1.4 MB |
+| Git LFS involvement | **none** — no filters, no LFS files |
+| Model / checkpoint / feature artifacts | **none existed anywhere** — Phase 3 was a null case |
+| Training or evaluation logs | none |
+| On-disk corpus | 674 MB **quarantined, not deleted** |
+| Remote | none configured; nothing was ever published |
+
+**Analysis.** The reset was unusually clean because the corpus never entered Git — it lived
+only in the git-ignored `data/` directory. That makes a history rewrite unnecessary, which is
+the finding that matters most: a rewrite would have invalidated every commit hash the
+documentation cites, to reclaim 2.6 MB of text from a 1.4 MB repository. Analysis and the
+exact procedure, should it ever be ordered, are in `GIT_HISTORY_DATASET_PURGE.md`. **No
+history was rewritten.**
+
+Two decisions were voided in place rather than deleted: **D-002** (keyword) and the data claim
+in **D-004** (positive-class constraint). Deleting them would have destroyed the reasoning
+trail. D-004's *lesson* — that a single-speaker positive class cannot be repaired by
+augmentation, threshold tuning or more public negatives — was promoted from a finding about
+one corpus into a **design requirement** on the next one (`DATASET.md` §2). That is the single
+most valuable thing carried across the reset.
+
+**What this does NOT prove.**
+- **Nothing about the new dataset**, which does not exist. No keyword is selected, no criteria
+  are defined, no recording has been made.
+- The rewritten probes are syntactically valid and were exercised, but **have not been run
+  against a real new-dataset directory**, because none exists.
+- The 674 MB on disk is quarantined, not deleted — the project cannot resolve to it, but the
+  bytes are still there until the user disposes of them.
+- No claim is made that the deprecated corpus was defective. It was removed by instruction.
+
+**Next.** Keyword selection (blocker **B-5**), then the dataset design specification
+(**B-6**) — `DATASET.md` §5. Hardware bring-up remains independent and unblocked apart from
+the pin map.

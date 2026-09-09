@@ -5,9 +5,9 @@
 # the linters a stable rootdir regardless of where the repo is cloned.
 
 [project]
-name = "sih-kws-solvani"
+name = "sih-kws-ps26172"
 version = "0.1.0"
-description = "SIH 2026 PS 26172 - low-latency edge keyword spotting for 'solvani' on ESP32-S3 with cloud ASR"
+description = "SIH 2026 PS 26172 - low-latency edge keyword spotting on ESP32-S3 with remote ASR (keyword not yet selected)"
 requires-python = ">=3.10,<3.14"
 license = { text = "Proprietary - academic project" }
 

@@ -1,177 +1,120 @@
-# DATASET.md — `solvani_kws_release`
+# DATASET.md
 
-Everything below was **measured in this tree on 2026-09-09** with
-`tools/analyze_manifests.py` and `tools/audio_probe.py`, unless marked otherwise.
+```
+DATASET STATUS:
+    NOT YET CREATED
 
-Location: **`<repo>/data/solvani_kws_release`** by default; override with
-`SIH_DATASET_ROOT` in `.env`. Resolved at runtime by `config/paths.py` — no
-absolute path is assumed anywhere. To obtain and verify it on a new machine, see
-**`DATASET_SETUP.md`**; the committed fingerprint is in `dataset_manifest/`.
+NEXT OBJECTIVE:
+    Select the optimal custom keyword, then design and build the
+    project-specific KWS dataset from first principles.
+```
 
-Provenance: `training Dataset (don't open)-20260908T164308Z-1-001.zip`
-→ nested `solvani_kws_release.zip` (570.5 MB, 42,628 entries).
-Dataset version `solvani_kws_release-1.0`, root SHA-256
-`34a1a266e094c329df6551c2525ae13430a74823497b0dda12273b7ad243de90`.
+**Last updated:** 2026-09-09 · **Status:** reset · See `DATASET_RESET_AUDIT.md` for the audit
+that produced this state and `DECISIONS.md` **D-010** for the decision.
 
 ---
 
-## 1. What it is
+## 1. Current state
 
-Keyword: **`solvani`** (*sol-vaa-nee*). Two prebuilt variants, both shipped:
+There is **no approved dataset for this project**. There is no keyword either — keyword
+selection was reopened by the same reset and is now the *first* task, not an inherited fact.
 
-| | `dataset_balanced` | `dataset_full` |
-|---|---:|---:|
-| Clips | **4,084** | **17,183** |
-| Manifest rows | 4,084 | 17,183 |
-| Files present on disk | ✅ all, 0 missing | ✅ all, 0 missing |
-
-Total WAVs on disk across both: **21,267**.
-
-**Clip format — verified on a random sample of 1,500 files, 100 % uniform:**
-mono · 16,000 Hz · 16-bit PCM · exactly **16,000 frames = 1.000 s**. No exceptions found.
-
-Labels: `positive` (contains *solvani*) · `negative` (speech without the keyword) ·
-`background` (noise / silence / ambience).
-
-## 2. Split × class
-
-**`dataset_full`**
-
-| split | total | positive | negative | background |
-|---|---:|---:|---:|---:|
-| train | 15,039 | 693 | 6,849 | 7,497 |
-| validation | 1,785 | 80 | 815 | 890 |
-| **test** | **359** | **17** | 163 | 179 |
-
-**`dataset_balanced`**
-
-| split | total | positive | negative | background |
-|---|---:|---:|---:|---:|
-| train | 3,255 | 693 | 1,386 | 1,176 |
-| validation | 629 | 80 | 297 | 252 |
-| **test** | **200** | **17** | 99 | 84 |
-
-The positive clips are **identical in both variants**; `balanced` only shrinks the
-negative/background multiplicity.
-
-## 3. ⚠ The binding constraint — unique source recordings
-
-Augmented copies share a `source_id`. Counting **unique underlying recordings**, not clips:
-
-| label | clips | **unique recordings** | inflation |
-|---|---:|---:|---:|
-| positive | 790 | **110** | ×7.2 |
-| negative | 7,827 | 1,087 | ×7.2 |
-| background | 8,566 | 1,190 | ×7.2 |
-
-Positives by split — **unique recordings**:
-
-| split | clips | unique recordings |
-|---|---:|---:|
-| train | 693 | **77** |
-| validation | 80 | **16** |
-| **test** | **17** | **17** |
-
-### What that means
-
-- The entire positive class is **110 utterances**.
-- **Speaker distribution for positives: `speaker_01` — 100 %.** One person.
-- **Environments: 2** — `fan` (60 recordings) and `classroom` (50 recordings), varied distance.
-- The test set contains **17 positive utterances**. A detection rate measured on it has a
-  95 % confidence interval of roughly **±20 percentage points**. It cannot settle anything
-  on its own; the streaming evaluation in §7 is the real bar.
-
-This is the same asymmetry that ended the prior build: thousands of negative speakers
-against one positive speaker. See `DECISIONS.md` **D-004**.
-
-## 4. Leakage — checked, and it passes
-
-| Test | Result |
+| Item | State |
 |---|---|
-| `source_id` appearing in more than one split | **0 / 2,387** |
-| `original_source` (raw recording) in more than one split | **0 / 2,387** |
+| Approved dataset | ❌ none |
+| Selected keyword | ❌ none — selection reopened |
+| Raw recordings | ❌ none collected |
+| Feature caches | ❌ none |
+| Trained model | ❌ none, in this project or any predecessor still in scope |
+| Dataset statistics | ❌ none that may be quoted |
 
-Augmented variants never straddle a split boundary. The split is genuinely
-**recording-disjoint**. It is **not** speaker-disjoint for positives, and cannot be — there
-is only one positive speaker. **No result from this dataset may be called speaker-independent.**
+**Nothing in this repository may be trained, validated, tested, benchmarked or documented
+against the deprecated corpus.** Any figure you find attributed to it is out of scope.
 
-## 5. Sources and augmentation
+## 2. What was deprecated, and why it matters
 
-**`dataset_full` source distribution:** librispeech 4,300 · musan 4,352 · esc50 3,544 ·
-speech_commands 3,079 · user 1,834 · tts_hard_neg 74.
+A previously supplied corpus (`solvani_kws_release`, 21,267 one-second WAVs) was removed from
+the project by instruction. It is gone from the active tree; its 674 MB on disk has been
+quarantined, not deleted, and is the user's to dispose of.
 
-| label | composition |
-|---|---|
-| positive | `user` 790 (all `speaker_01`) |
-| negative | librispeech 4,300 · speech_commands 3,079 · user 374 (50 unique) · **tts_hard_neg 74** |
-| background | musan 4,352 · esc50 3,544 · user 670 (90 unique: "classroom noise", "room with fan") |
+Its statistics, splits, class counts, augmentation scheme and keyword are **all out of scope**
+and must not inform any decision here.
 
-**Phonetic hard negatives (`tts_hard_neg`) — only 10 unique phrases:**
-`sovani`, `solvaniya`, `silvany`, `sylvani`, `salwani`, `silvani`, `solvanee` *(train)*;
-`so many`, `sol vani` *(validation)*; `solvany` *(test)*.
-Note the training split never sees `so many` / `sol vani` / `solvany` — the three hardest.
-**Expanding this set is cheap and high-value** (`BUILD_PLAN.md` Phase D).
+### The one thing worth carrying forward is a lesson, not a number
 
-**Augmentations already applied** (per clip, one each): `none` 2,387 · noise at SNR
-0/5/10/15/20 dB · `gain_±3/±6 dB` · `pitch_up`/`pitch_down` · `speed_0.95`/`1.05` ·
-`reverb` · `filter`. Every one of the 110 positive `source_id`s has an unaugmented `none`
-clip, so the clean originals are recoverable.
+That corpus failed for a structural reason, and the failure is instructive when *designing*
+a new dataset:
 
-**Not present:** measured room impulse responses, INMP441 channel simulation, codec
-artefacts, SpecAugment (feature-domain), and **time-shift** (see §6).
+> Its positive class was ~110 unique utterances from **one speaker** in two rooms, inflated
+> ×7.2 by augmentation to look like 790 clips. The negative class drew on thousands of
+> speakers. Augmentation copies information; it does not add any.
 
-## 6. Where the keyword sits inside the 1.0 s window
+A predecessor project demonstrated **on hardware** that this asymmetry cannot be repaired
+downstream: neither decision-logic tuning nor adding more public negative speech fixed it.
 
-Measured on the 110 unaugmented positives, 300–3400 Hz band energy in 50 ms bins:
+**Design consequences for the new dataset — these are requirements, not suggestions:**
 
-- active span ≈ **545 ms**, mean lead-in 235 ms, mean trail-out 221 ms
-- peak-energy bin: mean 10.2 / 20, **std 5.1 bins (±255 ms)**
-- peak-bin histogram is close to uniform across the whole second
+1. **Speaker diversity in the positive class is the primary design variable.** Plan for many
+   speakers from the start. A single-speaker positive class caps the entire project.
+2. **Keep every raw, uncut recording.** The previous corpus could not be re-cut at different
+   offsets or extended in context because its raw sessions were lost. Store raw sessions
+   alongside the curated clips.
+3. **Design positional spread deliberately.** A corpus of centred, complete words trains a
+   model that fails on sliding windows, where most windows contain a word *fragment*.
+4. **Splits must be recording-disjoint and, unlike last time, speaker-disjoint.** Only a
+   speaker-disjoint test split can support a speaker-independence claim.
+5. **Plan the hard-negative set as a first-class component**, not an afterthought — and put
+   the hardest confusables in *training*, not only in validation/test.
+6. **Record the evaluation protocol before collecting**, so the corpus is built to support
+   streaming evaluation rather than clip accuracy (`DECISIONS.md` D-005).
 
-**Conclusion:** the keyword is *loosely* centred with genuine positional spread — better than
-a tightly centred corpus, but the spread is a by-product, not a designed augmentation. Broadband
-RMS cannot localise the word at all (fan/classroom noise fills the window), which is itself a
-useful fact: **an energy-only VAD will not discriminate here.**
+## 3. Where the new dataset will live
 
-Other measurements: 4 of 110 unaugmented positives contain at least one full-scale sample
-(mild clipping); RMS across positives 0.034 – 0.485, mean 0.131.
-Speech-band (300–3400 Hz) energy fraction: positive 0.561 · negative 0.662 · **background 0.538**
-— background is *not* spectrally quiet (ESC-50/MUSAN include music and broadband noise), so
-band-energy alone separates almost nothing.
+| What | Path | Note |
+|---|---|---|
+| Raw source recordings | `<repo>/data/recordings` (`SIH_RECORDINGS_ROOT`) | **keep permanently** |
+| Built / curated dataset | `<repo>/data/dataset` (`SIH_DATASET_ROOT`) | git-ignored |
+| Features, checkpoints, models | `<repo>/artifacts` | git-ignored |
 
-## 7. How this dataset must and must not be used
+Both resolve through `config/paths.py` and are overridable in `.env`. Neither exists yet.
+Audio never enters Git; a fingerprint mechanism will be reintroduced once there is a dataset
+whose structure is known.
 
-**The trap, stated plainly.** Every clip is a 1.0 s window that already contains the whole
-word. The device sees a window every ~100–200 ms, most of which contain a *fragment* of a
-word, or the tail of one and the head of the next. The prior build measured its deployed model
-firing on **49.7 %** of realistic sliding windows while its clip test set reported **10.7 %** —
-a 4.6× optimism, and later a **~12×** optimism on false-activation rate. `[prior-build]`
+## 4. Tooling that survived the reset
 
-**Therefore, mandatory in this build:**
+Two dataset-agnostic measurement tools, rewritten to take a directory argument and to assume
+nothing about layout, keyword or class names:
 
-1. **Train with random time-shift**, rolling the keyword across the window including partial
-   presentations, and mint explicit **partial-keyword negatives** (word ≥50 % outside the frame).
-2. **Report the headline metric from a streaming simulation**: concatenate held-out clips into
-   long continuous audio with realistic gaps, slide the real inference window across it, apply
-   the real smoothing rule, and count **detections per spoken keyword** and
-   **false activations per hour**. Clip accuracy may be reported as a secondary diagnostic only.
-3. Hold the *unaugmented* test positives out of every fitting decision, threshold sweeps included.
+```bash
+python tools/audio_probe.py <dir>          # format uniformity, duration, RMS/peak, clipping
+python tools/audio_probe_bands.py <dir>    # speech-band energy fraction; where the word sits
+```
 
-## 8. Which variant to train on
+Use them on new recordings **while collecting**, not after training. Catching a format or
+level problem during a session is cheap; discovering it after training is not.
 
-Start on **`dataset_full`** for negatives/background (more negative diversity is free — the
-positives are identical) while keeping class weighting explicit, and use `dataset_balanced`
-as the fast iteration loop. Decide by measurement, record in `BUILD_LOG.md`.
+Removed with the reset, recoverable from git history at commit `2c4500c` if ever needed:
+`DATASET_SETUP.md`, `scripts/verify_dataset.py`, `scripts/generate_dataset_manifest.py`,
+`tools/analyze_manifests.py`, `dataset_manifest/`.
 
-## 9. Not available
+## 5. What the next phase must do
 
-The release README refers to a rebuild tree at `Desktop/data/` holding the **raw uncut
-recordings** and build scripts. **It does not exist on the original machine** — confirmed by
-four independent searches across all three of its fixed drives (`STORAGE_AUDIT.md` §11).
-Consequences:
+In order. **None of it has started, and none of it may be skipped.**
 
-- We cannot re-cut the positives at different offsets from the source sessions.
-- We cannot extend the 1.0 s window (e.g. to 1.2 s of context) for the existing positives.
-- Any new positive audio must be **newly recorded or synthesised**.
+1. **Keyword selection.** Define the criteria first — phonetic distinctiveness, syllable
+   count, energy distribution across the band the INMP441 actually resolves well, rarity in
+   ordinary speech, and a crisp onset for latency timestamping. Then choose, and record the
+   reasoning as a new decision. The old keyword carries no weight.
+2. **Dataset design specification**, written *before* any recording: target speaker count,
+   utterances per speaker, environments, distances, positional-offset strategy, hard-negative
+   word list, background sources, split policy (speaker-disjoint), and the licence position
+   for any external corpus.
+3. **Recording protocol** — prompts, sample rate and format, session structure, and the
+   quality bar for accepting or rejecting a take.
+4. **Collection**, keeping raw sessions.
+5. **Curation and build**, producing a documented, versioned dataset with a fresh manifest.
+6. **Only then** feature extraction, the streaming evaluation harness, and training.
 
-If the user can supply that tree, several Phase-D options get materially better.
+The evaluation methodology in `DECISIONS.md` D-005 survives the reset unchanged and governs
+step 6: headline numbers come from a streaming simulation over continuous audio, never from
+centred clips.

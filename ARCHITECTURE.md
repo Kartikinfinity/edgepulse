@@ -73,7 +73,7 @@ both numbers honestly on the dashboard rather than hide them.
 | FFT | 512-point, periodic Hann | |
 | Mel | 40 triangular filters, 125 - 7500 Hz | 125 Hz floor rejects the measured sub-100 Hz drift |
 | Output | **13 MFCC** (orthonormal DCT-II of log-mel) | |
-| Model input | **49 x 13** = 1.0 s context | matches dataset clip length exactly |
+| Model input | **49 x 13** = 1.0 s context | provisional — confirm against the new dataset's clip length once designed |
 | Normalisation | per-coefficient mean/std, emitted into a generated header | a single global mean/std collapsed c2..c12 and training degenerated `[prior-build]` |
 
 **Non-negotiable:** a host/device parity test must pass (max abs diff and correlation
@@ -90,9 +90,12 @@ measured accuracy-per-millisecond.
 ## 4. VAD — deliberately not a hard gate by default
 
 The story documents place VAD before KWS to save CPU. Phase 1 does not need that saving, and
-`DATASET.md` section 6 measured that **band energy barely separates this data** (speech-band
-fraction: positive 0.561, background 0.538). A tight energy gate would therefore drop real
-keywords for no benefit.
+band energy is a weak discriminator once backgrounds include music and broadband noise — a
+tight energy gate drops real keywords for little benefit.
+
+> **Re-measure this on the new dataset.** `tools/audio_probe_bands.py` reports the
+> speech-band energy fraction per directory; compare positive against background before
+> deciding whether `VAD_GATES_KWS` is ever worth enabling.
 
 **Design:** VAD runs and is *displayed* on the dashboard (it is part of the SIH story and is
 genuinely useful to show), but by default it only **gates the streaming end-of-utterance
@@ -157,12 +160,12 @@ failures render red and stay on the timeline rather than being cleared.
 | # | Deviation | Justification | Preserves SIH objective? |
 |---|---|---|---|
 | **A-1** | ASR server is a **host on the LAN**, not an internet cloud service | The problem statement requires a *remote ASR server*, and a LAN server is remote from the MCU. Every open-source ASR runs locally anyway; commercial cloud ASR would breach the "open-source only / no proprietary SDK" restriction. It also removes internet dependence from a live demo. A `SERVER_URI` config still allows a real remote endpoint. | Yes — the edge/cloud split is intact |
-| **A-2** | VAD does not gate KWS by default | Measured: band energy barely separates this dataset (`DATASET.md` section 6), so gating costs detections and buys CPU we are told to ignore in Phase 1. Retained behind a flag for Phase 2. | Yes — VAD is implemented, shown, and measurable |
+| **A-2** | VAD does not gate KWS by default | A band-energy VAD separates speech from realistic backgrounds poorly, so a tight gate costs detections to buy CPU that Phase 1 is told to ignore. **Re-measure on the new dataset** and keep the flag for Phase 2. | Yes — VAD is implemented, shown, and measurable |
 | **A-3** | Ring buffer in **PSRAM at 2.0 s** rather than a minimal SRAM buffer | Phase 1 has RAM headroom; a longer pre-roll strictly improves ASR quality. | Yes |
 | **A-4** | Streaming is **raw PCM16, not Opus** | The plan lists Opus as optional under bandwidth pressure. On a LAN, 256 kbit/s is free, and an encoder adds latency, CPU and a failure mode to a live demo. Bandwidth is not a graded metric; latency is. | Yes — "minimal data overhead" is met by streaming only after detection |
 | **A-5** | Toolchain stays **Arduino core 2.0.17 / ESP-IDF 4.4** | See `DECISIONS.md` D-003 — it is the only stack with measured on-hardware evidence in this project (84 ms inference with ESP-NN). | Yes |
-| **A-6** | Headline accuracy is reported from a **streaming simulation**, not clip accuracy | The prior build's clip metrics were optimistic by 4.6x (false-fire) and ~12x (rate). `DATASET.md` section 7. | Yes — it makes the SIH accuracy metric meaningful |
-| **A-7** | **Synthetic (TTS) positives** proposed as a training augmentation | The one real lever on the 110-utterance / one-speaker ceiling. Open-source TTS only. Gated by an A/B experiment on real held-out positives — it ships only if it measurably helps. | Yes — no pre-trained *keyword* model is used; only synthetic audio for a custom keyword |
+| **A-6** | Headline accuracy is reported from a **streaming simulation**, not clip accuracy | A predecessor's clip metrics were optimistic by 4.6x (false-fire) and ~12x (rate) against sliding windows. `DECISIONS.md` D-005. | Yes — it makes the SIH accuracy metric meaningful |
+| **A-7** | **Synthetic (TTS) positives** proposed as a training augmentation | A lever on positive-class scarcity, if the new dataset still ends up speaker-limited. Open-source TTS only. Gated by an A/B on **real** held-out positives — it ships only if it measurably helps. Collecting real speakers is strictly better. | Yes — no pre-trained *keyword* model is used; only synthetic audio for a custom keyword |
 | **A-8** | An **intent/action stage** after ASR | The problem statement stops at ASR; the story documents show `TEXT -> action`. Included because the demo needs a visible outcome. Kept thin and rule-based. | Yes — additive |
 
 ## 9. What Phase 2 will owe (recorded now, not forgotten)

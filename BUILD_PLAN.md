@@ -1,4 +1,24 @@
-# BUILD_PLAN.md — Phase 1 (demo-grade, 12–16 h)
+# BUILD_PLAN.md — Phase 1 (demo-grade)
+
+> ## ⚠ SUPERSEDED AT THE FRONT: a dataset-first Phase 0 now precedes everything
+>
+> The supplied dataset was deprecated (`DECISIONS.md` D-010). **Phases B through E below
+> assume a dataset that no longer exists.** They remain valid as *method* — the feature
+> spec, the streaming-harness design and the exit bars are all still right — but none of
+> them can start until a dataset exists.
+>
+> **New Phase 0, which runs first:**
+>
+> | # | Task | Exit bar |
+> |---|---|---|
+> | 0.1 | Define keyword-selection criteria, then select the keyword | criteria written down *before* the choice; decision recorded in `DECISIONS.md` |
+> | 0.2 | Dataset design spec — speakers, utterances, environments, distances, positional offsets, hard negatives, backgrounds, split policy, licences | written and reviewed **before** any recording |
+> | 0.3 | Recording protocol + quality bar | a session can be run repeatably by someone else |
+> | 0.4 | Collect, **keeping every raw session** | raw sessions stored under `data/recordings` |
+> | 0.5 | Curate, build, version, fingerprint | documented dataset + committed manifest |
+>
+> Phase A (hardware bring-up) is dataset-independent and may run in parallel.
+> Full detail: `DATASET.md` §5.
 
 Ordering principle, taken from the supplied story document and endorsed by the prior build's
 failures: **make the audio path work end-to-end with a dummy decision first, then insert the
@@ -53,13 +73,15 @@ plausibly bad number. A harness that cannot fail is not a harness.
 
 ## Phase D — Attack the positive-class ceiling  (~2.5 h) 🟢 — **highest-value phase**
 
-`DATASET.md` section 3: 110 utterances, one speaker, two rooms. Everything else is downstream of this.
+Applies **only if** the new dataset still ends up positive-class-limited. If Phase 0 delivers
+genuine multi-speaker coverage, most of this phase becomes unnecessary — which is the point of
+doing the dataset properly first (`DATASET.md` §2).
 
 | # | Task | Exit bar |
 |---|---|---|
 | D1 | **Time-shift augmentation** + explicit **partial-keyword negatives** (word >=50 % outside the window) | training window distribution matches inference; measured on the Phase-C harness |
-| D2 | **Expand phonetic hard negatives** with open-source TTS — the shipped set is only 10 phrases, and the 3 hardest are not in train | >=40 confusable phrases across many synthetic voices, in train |
-| D3 | **A-7 experiment: synthetic positives.** Generate `solvani` across many open-source TTS voices. Train A (real only) vs B (real + synthetic) | decided **only** on real held-out positives via Phase C. Ship B only if it wins |
+| D2 | **Design the phonetic hard-negative set** with open-source TTS, and put the hardest confusables in **train**, not only in val/test | >=40 confusable phrases across many synthetic voices, in train |
+| D3 | **A-7 experiment: synthetic positives.** Generate the selected keyword across many open-source TTS voices. Train A (real only) vs B (real + synthetic) | decided **only** on real held-out positives via Phase C. Ship B only if it wins |
 | D4 | SpecAugment (time/freq masking) in the feature domain | A/B on the Phase-C harness |
 | D5 | Room-impulse-response reverb + INMP441 channel simulation (band-limit to the mic's response) | A/B on the Phase-C harness |
 | D6 | *If the user can record:* 3–5 additional speakers x ~20 utterances | the only true fix; ~15 min per person. Recommended, not blocking |

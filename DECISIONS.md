@@ -54,16 +54,22 @@ personal data, both of which are out of bounds. Full working: `STORAGE_AUDIT.md`
 - `D:\sih-ml-env` (TensorFlow 2.21.0, from the prior build) is deliberately **not** adopted —
   using it would split the project across drives. `D:\speech_commands` (5.37 GB) may be read as
   an external corpus, the same way any system-installed dataset would be.
-- The original volume was a **HDD, not an SSD** — feature extraction over 21k small files is
+- The original volume was a **HDD, not an SSD** — feature extraction over many small files is
   I/O-bound there. The general rule stands on any machine: **cache features to a single `.npz`
-  rather than re-reading 21,267 WAVs each epoch.**
+  rather than re-reading every WAV each epoch.**
 - Superseded by **D-009**: the tree is no longer tied to any volume and can be cloned anywhere.
 
 ---
 
-## D-002 — Keyword is `solvani`
+## D-002 — ~~Keyword is `solvani`~~ **VOID (superseded by D-010, 2026-09-09)**
 
-**Date:** 2026-09-09 · **Status:** locked by the supplied data
+> **THIS DECISION NO LONGER HOLDS.** The dataset that locked the keyword was deprecated and
+> removed from the project. **Keyword selection is reopened and is now the project's first
+> task** — see `DATASET.md` §5. Nothing below may be used to argue for any particular keyword.
+> The *selection criteria* it applied (syllable count, band placement, rarity, crisp onset)
+> remain a reasonable starting checklist; the conclusion does not.
+
+**Date:** 2026-09-09 · **Status:** ~~locked by the supplied data~~ **VOID**
 
 **Decision.** The keyword is **`solvani`**. Not a free choice — the supplied dataset is built
 for it, and it is the only keyword for which positive audio exists.
@@ -101,9 +107,16 @@ to be revisited if and only if a measured limitation demands it.
 
 ---
 
-## D-004 — The positive class is the project's binding constraint; plan around it explicitly
+## D-004 — ~~The positive class is the binding constraint~~ **VOID as a data claim (D-010); the lesson is retained**
 
-**Date:** 2026-09-09 · **Status:** active
+> **The specific numbers below are OUT OF SCOPE** — they describe the deprecated corpus.
+> **What survives is the design principle**, now recorded as a requirement in `DATASET.md` §2:
+> a positive class drawn from one speaker cannot be repaired by augmentation, threshold
+> tuning, or more public negative speech — each was demonstrated exhausted on hardware.
+> **Therefore speaker diversity in the positive class is the primary design variable for the
+> new dataset**, to be planned in from the start rather than discovered afterwards.
+
+**Date:** 2026-09-09 · **Status:** ~~active~~ **VOID as a statement about this project's data**
 
 **Decision.** Treat the 110-utterance / one-speaker positive class as **the** engineering
 problem, and allocate Phase D to it before any architecture search.
@@ -170,10 +183,13 @@ a genuinely remote endpoint if desired.
 
 **Date:** 2026-09-09 · **Status:** proposed · Cross-ref `ARCHITECTURE.md` A-7
 
-**Decision.** Generate `solvani` from many open-source TTS voices to attack the one-speaker
-ceiling, and also expand the phonetic hard negatives the same way (the shipped set has only
-**10** unique confusable phrases, and the three hardest — `so many`, `sol vani`, `solvany` —
-appear only in validation/test, never in train).
+**Decision.** If the new dataset still ends up positive-class-limited, generate the selected
+keyword from many open-source TTS voices to attack the speaker ceiling, and build the phonetic
+hard-negative set the same way — with the hardest confusables placed in **train**, not only in
+validation/test.
+
+> **Note (D-010):** collecting real speakers is strictly better than synthesising them. This
+> decision is a fallback, and the new dataset should be designed so it is not needed.
 
 **Guard.** Synthetic positives ship **only if** a model trained with them beats one trained
 without them, judged on **real** held-out positives through the Phase-C streaming harness.
@@ -239,3 +255,52 @@ plus a documentation set that told the reader to `cd E:/sih2026`.
 (data integrity against the committed manifest), `scripts/health_check.py` (project state).
 The `tools/` scripts were re-run from an unrelated working directory to confirm they no longer
 depend on the caller's location.
+
+---
+
+## D-010 — The supplied dataset is deprecated; the project restarts dataset-first
+
+**Date:** 2026-09-09 · **Status:** active · **Decided by:** the user (change of project
+direction) · Supersedes **D-002**, voids the data claim in **D-004**
+
+**Decision.** The previously supplied corpus is removed from the project. It may not be used
+for training, validation, testing, benchmarking, architecture decisions, preprocessing
+decisions, dataset statistics, augmentation design, keyword selection, conclusions,
+documentation, or future recommendations. **The project now has no approved dataset and no
+selected keyword**, and the first task is keyword selection followed by designing and building
+a dataset from first principles.
+
+**Why.** A direction change by the user. No technical defect in the corpus forced it; this
+decision records the instruction and its consequences rather than arguing for it.
+
+**Scope of the reset — what was actually removed.**
+- Tracked files whose only purpose was that corpus: `dataset_manifest/` (manifest + 21,285
+  checksums), `DATASET_SETUP.md`, `scripts/verify_dataset.py`,
+  `scripts/generate_dataset_manifest.py`, `tools/analyze_manifests.py`. All recoverable from
+  history at `2c4500c`.
+- Every active reference in shared documentation and configuration.
+- The 674 MB on disk was **quarantined, not deleted** — disposing of the user's data is the
+  user's call.
+
+**What was deliberately retained, and why.**
+- **All hardware knowledge** (ESP32-S3-WROOM-1-N16R8 GPIO constraints, PSRAM/flash facts,
+  INMP441 electrical and I²S detail) — independent of any dataset.
+- **The architecture** and its eight deviations — the pipeline shape does not depend on which
+  corpus feeds it.
+- **D-005**, the evaluation methodology: streaming metrics over continuous audio, never clip
+  accuracy; SWEEP/VALIDATE separation; host/device feature parity. This is dataset-independent
+  and is the most valuable lesson the project holds.
+- **The design lesson from the deprecated corpus' failure**, restated as a *requirement* in
+  `DATASET.md` §2: speaker diversity in the positive class is the primary design variable, raw
+  recordings must be kept, positional spread must be deliberate, and splits must be
+  speaker-disjoint. The numbers are out of scope; the engineering principle is not.
+- Two dataset-agnostic measurement tools, rewritten to take a directory argument.
+
+**Consequences.**
+- No metric of any kind may currently be quoted for this project. `EXPERIMENT_STATE.md` is
+  reset accordingly.
+- Keyword selection reopens with no incumbent. The old keyword carries no weight.
+- The dataset must be **versioned and fingerprinted** once built; a fingerprint mechanism will
+  be reintroduced when its structure is known. Audio never enters Git.
+- **No Git history rewrite was performed and none is required** — no dataset binary was ever
+  committed. Analysis in `GIT_HISTORY_DATASET_PURGE.md`.

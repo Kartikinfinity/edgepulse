@@ -19,26 +19,27 @@ git clone <your-repo-url> sih2026 && cd sih2026
 bash scripts/setup.sh --dev                                    # Linux / macOS / Git Bash
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -Dev  # Windows PowerShell
 
-# 3. put the dataset in place - it is NOT in Git. See DATASET_SETUP.md
-#    default location: <repo>/data/solvani_kws_release
+# 3. there is NO dataset to place - building one is the current task (DATASET.md)
 
 # 4. prove the machine is ready
 python scripts/verify_setup.py        # must print READY
-python scripts/verify_dataset.py      # must print PASS
 python scripts/health_check.py        # shows phase progress and blockers
 
 # 5. read, in this order
-#    CLAUDE.md -> PROJECT_STATE.md -> this file -> BUILD_PLAN.md -> DECISIONS.md
+#    CLAUDE.md -> DATASET.md -> PROJECT_STATE.md -> this file -> DECISIONS.md
 
 # 6. then start the exact next task named below. Nothing before it.
 ```
 
-**The exact next task is `BUILD_PLAN.md` Phase A1 → A2, then B, then C.**
-Phase A1 is already partly done by `scripts/setup.sh`; confirm with
-`verify_setup.py` rather than assuming.
+**The exact next task is keyword selection, then dataset design** —
+`DATASET.md` §5, `BUILD_PLAN.md` Phase 0.
 
-**Do not start Phase D/E/F/G/H before C exists.** The reason is in `DECISIONS.md`
-D-005 and it is the single most expensive lesson this project has.
+Define the selection criteria *before* choosing the keyword, and write the dataset
+specification *before* recording anything. Hardware bring-up (Phase A) is
+dataset-independent and may run in parallel once the pin map arrives.
+
+**Do not train anything before the streaming evaluation harness exists.** The reason is in
+`DECISIONS.md` D-005 and it is the single most expensive lesson this project has.
 
 ---
 
@@ -46,14 +47,16 @@ D-005 and it is the single most expensive lesson this project has.
 
 | Area | State |
 |---|---|
-| Discovery: all source PDFs, prior build, dataset, hardware, toolchain | ✅ done |
-| Dataset analysis (structure, leakage, acoustics) | ✅ done, measured, in `DATASET.md` |
+| Discovery: source documents, prior build, hardware, toolchain | ✅ done |
+| **Dataset** | ❌ **RESET — deprecated and removed (D-010). None exists.** |
+| **Keyword** | ❌ **selection reopened; no incumbent** |
 | Architecture design + 8 justified deviations | ✅ done, in `ARCHITECTURE.md` |
 | Build plan with per-phase exit bars | ✅ done, in `BUILD_PLAN.md` |
-| Decisions recorded with reasoning | ✅ done, in `DECISIONS.md` (D-001…D-009) |
+| Decisions recorded with reasoning | ✅ done, in `DECISIONS.md` (D-001…D-010) |
 | Storage cleanup and storage strategy | ✅ done, in `STORAGE_AUDIT.md` |
-| Transition verification (board, toolchain, dataset) | ✅ done, in `BUILD_LOG.md` OPS-001 |
-| Cross-machine portability layer | ✅ done — this handoff |
+| Transition verification (board, toolchain) | ✅ done, in `BUILD_LOG.md` OPS-001 |
+| Cross-machine portability layer | ✅ done, `BUILD_LOG.md` OPS-002 |
+| Dataset reset + active-context purge | ✅ done, `BUILD_LOG.md` OPS-003 |
 
 ## 2. What has NOT been started
 
@@ -70,19 +73,20 @@ D-005 and it is the single most expensive lesson this project has.
 | Anything flashed to the board | **nothing** |
 | Any measurement taken in this tree from hardware | **none** |
 
-Only `tools/` has code: three read-only dataset-analysis scripts.
+Only `tools/` has code: two dataset-agnostic audio measurement scripts.
 
 ## 3. Why the important decisions were made
 
 Full reasoning in `DECISIONS.md`; the short version:
 
 - **D-001 project layout** — one self-contained root, one drive. The original machine's C: was 100 % full; the project lives beside its dataset so nothing splits.
-- **D-002 keyword `solvani`** — not a choice. The supplied dataset is the only positive audio that exists.
+- **D-002 keyword** — **VOID.** The dataset that fixed the keyword is deprecated; selection is reopened (D-010).
 - **D-003 Arduino core 2.0.17 / ESP-IDF 4.4** — the only stack with *measured* on-hardware evidence (84 ms inference with ESP-NN). The plan's ESP-IDF 5.x is better long-term but unproven here and costs hours we do not have.
-- **D-004 the positive class is the binding constraint** — see §7. Everything in Phase D targets it.
+- **D-004** — **VOID as a data claim**, but its lesson is now a *requirement* on the new dataset: see §5 and §7.
 - **D-005 streaming metrics, never clip metrics** — the prior build reported clip numbers that were optimistic by 4.6× and ~12×, and once "solved" false positives by never firing at all. This is why the evaluation harness is built *before* the model.
 - **D-006 ASR on the LAN host, raw PCM over WebSocket** — open-source-only rule, no internet dependence in a live demo, and latency is the graded metric, not bandwidth.
-- **D-008 VAD is an indicator, not a KWS gate** — measured: band energy barely separates this data (positive 0.561 vs background 0.538).
+- **D-008 VAD is an indicator, not a KWS gate** — band energy is a weak discriminator against realistic backgrounds; re-measure on the new dataset before enabling any gate.
+- **D-010 dataset reset** — the supplied corpus is deprecated and out of scope; the project restarts dataset-first.
 
 ## 4. Project root
 
@@ -94,43 +98,46 @@ which derives the root from its own file location.
 - Your machine: wherever you cloned it.
 - Override any path in `.env` (copy from `.env.example`; it is git-ignored).
 
-## 5. Dataset location, structure, limitations
-
-**Location** — default `<repo>/data/solvani_kws_release`; override with
-`SIH_DATASET_ROOT` in `.env`. **Not in Git** (0.64 GB, 21,267 WAVs).
-Getting it and verifying it: `DATASET_SETUP.md`.
-
-**Structure**
+## 5. Dataset — THERE IS NONE
 
 ```
-data/solvani_kws_release/
-├── dataset_balanced/          4,084 clips  (fast iteration loop)
-└── dataset_full/             17,183 clips  (more negative diversity)
-    ├── manifests/{train,validation,test}.csv
-    └── {train,validation,test}/{positive,negative,background}/*.wav
+DATASET STATUS: NOT YET CREATED
+NEXT OBJECTIVE: select the optimal custom keyword, then design and build the
+                project-specific KWS dataset from first principles.
 ```
 
-Every clip: mono · 16 kHz · 16-bit PCM · exactly 16,000 frames (1.000 s).
-Verified 100 % uniform on a 1,500-file random sample.
+The previously supplied corpus was **deprecated and removed from the project**
+(`DECISIONS.md` D-010; audit in `DATASET_RESET_AUDIT.md`). It must not be used for training,
+validation, testing, benchmarking, statistics, augmentation design, keyword selection, or any
+conclusion. **Its numbers are out of scope — do not quote them, even as background.**
 
-| variant | split | positive | negative | background |
-|---|---|---:|---:|---:|
-| full | train | 693 | 6,849 | 7,497 |
-| full | validation | 80 | 815 | 890 |
-| full | **test** | **17** | 163 | 179 |
-| balanced | train | 693 | 1,386 | 1,176 |
-| balanced | validation | 80 | 297 | 252 |
-| balanced | **test** | **17** | 99 | 84 |
+Where the new material will live, once it exists:
 
-**Known limitations — do not rediscover these**
+| What | Path | Note |
+|---|---|---|
+| Raw source recordings | `<repo>/data/recordings` (`SIH_RECORDINGS_ROOT`) | **keep permanently** |
+| Built / curated dataset | `<repo>/data/dataset` (`SIH_DATASET_ROOT`) | git-ignored |
 
-1. **110 unique positive utterances, one speaker (`speaker_01`), two rooms.** The 790 positive clips are ×7.2 augmentation of those 110. See §7.
-2. **The test split holds 17 unique positive utterances.** A detection rate from it carries roughly ±20 percentage points. It cannot settle anything alone.
-3. **Speaker-independence is impossible to measure** from this data. Never claim it.
-4. Phonetic hard negatives are only **10 unique TTS phrases**, and the three hardest (`so many`, `sol vani`, `solvany`) appear only in validation/test — never in training.
-5. Splits *are* genuinely recording-disjoint: 0 of 2,387 source recordings span a split. The leakage check passes.
-6. Clips are 1.0 s windows containing the whole word; the device sees fragments. This mismatch is the trap in `DATASET.md` §7.
-7. The **raw uncut recordings do not exist** on the original machine (four independent searches). Positives cannot be re-cut at new offsets. New positive audio must be recorded or synthesised.
+Neither exists. Full plan: **`DATASET.md`**.
+
+### Requirements for the new dataset — learned the expensive way
+
+A predecessor project proved **on hardware** that a positive class recorded from one speaker
+cannot be repaired downstream: neither decision-logic tuning nor more public negative speech
+fixed it. Augmentation copies information; it does not add any. So:
+
+1. **Speaker diversity in the positive class is the primary design variable.** Plan for many
+   speakers from the start.
+2. **Keep every raw, uncut recording.** The deprecated corpus could not be re-cut at different
+   offsets because its raw sessions were lost. Do not repeat that.
+3. **Design positional spread deliberately** — a corpus of centred, complete words trains a
+   model that fails on sliding windows.
+4. **Splits must be recording-disjoint AND speaker-disjoint.** Only a speaker-disjoint test
+   split can support a speaker-independence claim.
+5. **Hard negatives are a first-class component**, and the hardest confusables belong in
+   *training*, not only in validation/test.
+6. **Write the evaluation protocol before collecting**, so the corpus supports streaming
+   evaluation rather than clip accuracy.
 
 ## 6. Hardware
 
@@ -170,29 +177,25 @@ Non-negotiable constraints for this exact module:
 Prior build used SCK→GPIO 6, WS→GPIO 5, SD→GPIO 4, L/R→GND. **Treat as
 unconfirmed** until the authoritative map arrives.
 
-## 7. THE CENTRAL ML FINDING — do not let this be forgotten
+## 7. THE CENTRAL PRINCIPLE — do not let this be forgotten
 
-> The dataset holds **21,267 WAV files**, which looks generous and is not.
-> The positive class is approximately **110 unique utterances from ONE
-> speaker**, inflated to 790 clips by augmentation. The negative class draws on
-> thousands of speakers.
+> **A positive class recorded from ONE speaker cannot be repaired downstream.**
+> Augmentation copies information; it does not add any. A predecessor project
+> demonstrated this **on hardware**: decision-logic tuning and more public negative
+> speech were each independently exhausted, and neither fixed it.
 
-The prior build died on exactly this asymmetry and proved **on hardware** that
-decision-logic tuning and more negative data do not fix it. Augmentation copies
-information; it does not add any.
+This is why the project restarts dataset-first. Speaker diversity must be designed in
+before recording, not discovered after training.
 
-**Four things this project must keep separate and never conflate:**
+**Five things this project must keep separate and never conflate:**
 
 | Measure | What it means | Status |
 |---|---|---|
-| **Clip-level classification** | accuracy on centred 1.0 s clips | secondary diagnostic **only** |
-| **Streaming detector** | sliding windows over continuous audio, real smoothing rule → detections per spoken keyword, **false activations per hour** | **the headline metric** |
-| **False-trigger behaviour** | measured on audio where the keyword is never spoken, fresh, never used for tuning | must be measured separately |
-| **Wake-word latency** | keyword end → decision → first packet → ASR receipt | the SIH-graded number |
-| **Real-world robustness** | other speakers, distance, noise, rooms | currently **unmeasurable** with this data |
-
-Phase C builds the streaming harness. Phase D attacks the positive-class
-ceiling. Do not reorder them.
+| **Clip-level classification** | accuracy on centred, complete-word clips | secondary diagnostic **only** |
+| **Streaming detector** | sliding windows over continuous audio, real smoothing rule -> detections per spoken keyword, **false activations per hour** | **the headline metric** |
+| **False-trigger behaviour** | measured on fresh audio where the keyword is never spoken, never used for tuning | must be measured separately |
+| **Wake-word latency** | keyword end -> decision -> first packet -> ASR receipt | the SIH-graded number |
+| **Real-world robustness** | other speakers, distance, noise, rooms | requires a speaker-disjoint test split |
 
 ## 8. Software environment
 
@@ -212,7 +215,7 @@ Full instructions: `ENVIRONMENT_SETUP.md`.
 - Branch `master`, working tree clean at handoff.
 - **No remote configured.** The push command is in the handoff report; nothing has been pushed.
 - Dataset, artifacts, `.venv`, `.pio`, `.env` and all secrets are git-ignored.
-- `dataset_manifest/` **is** committed — that is how another machine proves it has the right data without the WAVs.
+- No dataset fingerprint is committed — there is no dataset. One will be reintroduced once the new dataset exists and its structure is known.
 
 ## 10. Exact next task and commands
 
@@ -256,9 +259,9 @@ bad number. *A harness that cannot fail is not a harness.*
 
 Wasting time re-deriving any of these is the most likely failure mode.
 
-1. **Do not re-analyse the dataset from scratch.** It is measured in `DATASET.md`; reproduce with `python tools/analyze_manifests.py` if you want to confirm.
-2. **Do not re-litigate the keyword.** `solvani` is fixed by the data (D-002).
-3. **Do not "discover" that positives are scarce.** It is §7, it is D-004, it is the whole point of Phase D.
+1. **Do not re-derive the hardware constraints or the architecture.** Both survived the reset intact and are recorded in `HARDWARE.md` and `ARCHITECTURE.md`.
+2. **Do NOT reuse the deprecated corpus or any of its statistics** — for training, benchmarking, keyword selection, or even as background (D-010).
+3. **Do not "discover" that a single-speaker positive class fails.** It is §7 and it is now a *design requirement* on the new dataset, not a finding to reproduce.
 4. **Do not evaluate on centred clips and report it as detector accuracy.** D-005. This mistake has already cost this project three times.
 5. **Do not migrate to ESP-IDF 5.x** without a measured reason. D-003.
 6. **Do not optimise for <256 KB RAM or <10 % idle CPU.** Explicitly out of scope this phase — but *measure and display* both honestly.

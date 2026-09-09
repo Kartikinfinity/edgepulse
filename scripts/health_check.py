@@ -37,6 +37,7 @@ from config.paths import (  # noqa: E402
     EXPERIMENTS_DIR,
     FIRMWARE_DIR,
     PROJECT_ROOT,
+    RECORDINGS_ROOT,
     SERVER_DIR,
     TRAINING_DIR,
     UI_DIR,
@@ -99,6 +100,8 @@ def main() -> int:
     experiments = len(list(EXPERIMENTS_DIR.glob("*.md"))) if EXPERIMENTS_DIR.is_dir() else 0
 
     rows = [
+        ("0.1", "keyword selected", False),   # no keyword exists; see DATASET.md
+        ("0.2", "dataset built", DATASET_ROOT.is_dir()),
         ("A1", "Python venv", venv),
         ("A2", "PlatformIO config", pio_ini),
         ("A3-A6", "firmware source / bring-up", bool(fw_src)),
@@ -116,13 +119,15 @@ def main() -> int:
     print()
 
     # --- Dataset -----------------------------------------------------------
-    print("DATASET")
-    if DATASET_ROOT.is_dir():
-        n = sum(1 for _ in DATASET_ROOT.rglob("*.wav"))
-        print(f"  {OK} {DATASET_ROOT}")
-        print(f"       {n:,} wav files  (expect 21,267 - run scripts/verify_dataset.py)")
-    else:
-        print(f"  {BAD} not found: {DATASET_ROOT}   see DATASET_SETUP.md")
+    # Absence is the expected state after the D-010 reset, not an error.
+    print("DATASET   status: NOT YET CREATED (DATASET.md)")
+    for label, path in (("built dataset", DATASET_ROOT), ("raw recordings", RECORDINGS_ROOT)):
+        if path.is_dir():
+            n = sum(1 for _ in path.rglob("*.wav"))
+            print(f"  {OK} {label:<15}{path}  ({n:,} wav)")
+        else:
+            print(f"  {PEND} {label:<15}{path}  (absent, as expected)")
+    print("       Next: keyword selection, then dataset design.")
     print()
 
     # --- Blockers, read straight out of STATUS.md --------------------------

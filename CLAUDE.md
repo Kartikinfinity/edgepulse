@@ -1,8 +1,8 @@
 # CLAUDE.md — orientation for any session in this repository
 
 **Project:** SIH 2026 · PS **26172** — *Low Latency and Efficient Voice Activator for Edge Devices* (ISRO / Dept. of Space)
-**Keyword:** `solvani` (sol-vaa-nee) — fixed by the supplied dataset.
-**Phase:** **Phase 1** — maximum practical accuracy, false-trigger resistance, latency and demo quality.
+**Keyword:** **NOT YET SELECTED** — selection is reopened and is the project's first task.
+**Phase:** **Dataset-first restart.** No approved dataset exists (`DECISIONS.md` D-010).
 
 ---
 
@@ -63,30 +63,32 @@ Serial port names differ per machine — the original host used COM7, Linux will
 use `/dev/ttyACM0`. **Never hard-code a port.** Let PlatformIO auto-detect or
 set `SIH_UPLOAD_PORT` in `.env`.
 
-## 3. Dataset
+## 3. Dataset — THERE IS NONE YET
 
-Default location `<repo>/data/solvani_kws_release`, overridable via
-`SIH_DATASET_ROOT`. **Not in Git** — see `DATASET_SETUP.md` to obtain and verify it.
+```
+DATASET STATUS: NOT YET CREATED
+NEXT OBJECTIVE: select the optimal custom keyword, then design and build
+                the project-specific KWS dataset from first principles.
+```
 
-21,267 WAVs · mono · 16 kHz · 16-bit · exactly 1.000 s ·
-labels `positive` / `negative` / `background` · two variants (`dataset_full`
-17,183 and `dataset_balanced` 4,084).
+The previously supplied corpus was **deprecated and removed** (`DECISIONS.md` D-010,
+`DATASET_RESET_AUDIT.md`). It must not be used for training, validation, testing,
+benchmarking, statistics, augmentation design, keyword selection, or any conclusion.
+Its numbers are out of scope — do not quote them, even from memory.
 
-### The one finding that decides whether this project succeeds
+Full status and the plan: **`DATASET.md`**.
 
-> **21,267 files looks generous and is not. The positive class is ~110 unique
-> utterances from ONE speaker (`speaker_01`) in two rooms**, inflated to 790
-> clips by ×7.2 augmentation. The negative class draws on thousands of speakers.
-> The test split holds **17** unique positive utterances.
+### The design principle carried forward from why the old corpus failed
 
-The prior build died on exactly this asymmetry and proved **on hardware** that
-decision-logic tuning and more negative data do not fix it. Augmentation copies
-information; it does not add any. Everything in `BUILD_PLAN.md` Phase D targets
-this. **Do not spend time tuning thresholds hoping to escape it.**
+> A positive class recorded from **one speaker** cannot be repaired downstream.
+> Augmentation copies information; it does not add any. A predecessor demonstrated
+> **on hardware** that neither decision-logic tuning nor more public negative speech
+> fixes it.
 
-Splits *are* genuinely recording-disjoint (0 of 2,387 sources span a split), but
-they cannot be speaker-disjoint. **No result from this data may ever be called
-speaker-independent.**
+So for the dataset you are about to design: **speaker diversity in the positive class is
+the primary design variable**, raw uncut recordings must be kept, positional spread must
+be deliberate, and splits must be **speaker-disjoint**. `DATASET.md` §2 states these as
+requirements.
 
 ## 4. Constraints
 
@@ -105,7 +107,8 @@ both honestly on the dashboard; `ARCHITECTURE.md` §9 records the Phase-2 debt.
 
 Also binding, from the problem statement: **open-source only**, no proprietary
 voice-activation SDKs, and **no models pre-trained on generic smart-assistant
-keywords**. The keyword must be custom — it is.
+keywords**. The keyword must be **custom** — which is a live constraint on the
+keyword-selection task now in front of you, not a settled fact.
 
 ## 5. Safety rules — non-negotiable
 
@@ -122,14 +125,16 @@ keywords**. The keyword must be custom — it is.
    before any on-device accuracy claim.
 5. **Anything tagged `[prior-build]` is evidence from a *different* project**
    (keyword "Sentinel"). Re-verify before quoting it as a result here.
+   Likewise, **the deprecated corpus' statistics are out of scope entirely** —
+   they may not be quoted even as background (`DECISIONS.md` D-010).
 6. **One change per experiment**, logged in `BUILD_LOG.md` with a pre-declared
    pass bar and a mandatory "what this does NOT prove" section.
 7. **If a result looks surprisingly good, suspect the evaluation before the
    model.** That instinct has been correct every time on this project.
 8. **Never commit secrets** — Wi-Fi credentials, tokens, keys. They belong in
    `.env`, which is git-ignored.
-9. **Never commit the dataset or model artifacts.** `dataset_manifest/` is how
-   integrity is proven instead.
+9. **Never commit audio or model artifacts.** Once the new dataset exists it gets a
+   committed fingerprint (counts + checksums); the audio itself stays out of Git.
 
 ## 6. Paths — the repository is machine-independent
 
@@ -147,7 +152,8 @@ from config.paths import DATASET_ROOT, ARTIFACTS_DIR, PROJECT_ROOT
 | What | Where |
 |---|---|
 | Project root | derived at runtime — never hard-code it |
-| Dataset | `<root>/data/solvani_kws_release` or `SIH_DATASET_ROOT` |
+| Dataset (to be built) | `<root>/data/dataset` or `SIH_DATASET_ROOT` — **does not exist yet** |
+| Raw recordings (keep!) | `<root>/data/recordings` or `SIH_RECORDINGS_ROOT` |
 | Features / checkpoints / models | `<root>/artifacts` (git-ignored) |
 | Python venv | `<root>/.venv` (git-ignored) |
 | Firmware build output | `<root>/firmware/.pio` (git-ignored) |
@@ -178,13 +184,11 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -Dev  # Windows
 
 # verification
 python scripts/verify_setup.py          # machine readiness
-python scripts/verify_dataset.py        # dataset integrity (--full for all files)
 python scripts/health_check.py          # git state, phase progress, blockers
 
-# dataset analysis (read-only, reproduces every figure in DATASET.md)
-python tools/analyze_manifests.py
-python tools/audio_probe.py
-python tools/audio_probe_bands.py
+# audio measurement (dataset-agnostic; point at any directory of WAVs)
+python tools/audio_probe.py <dir>         # format, duration, level, clipping
+python tools/audio_probe_bands.py <dir>   # speech-band energy; where the word sits
 
 # tests
 python -m pytest
@@ -195,23 +199,28 @@ pio run -t upload
 pio device monitor
 ```
 
-## 8. Current priorities
+## 8. Current priorities — dataset-first
 
-1. **`BUILD_PLAN.md` A1 → A2 → B → C.** In that order.
-2. **Build the streaming evaluation harness (Phase C) before any model.** This is
-   the most expensive lesson the project has; see `DECISIONS.md` D-005.
-3. **Then Phase D** — the positive-class ceiling, the binding constraint.
-4. Phases B, C, D, E and H need **no hardware** — roughly 9 of 16 planned hours.
-   If the board or the pin map is unavailable, work there rather than idling.
+1. **Keyword selection.** Define criteria, then choose, then record it as a decision.
+   No incumbent keyword; the old one carries no weight.
+2. **Dataset design specification**, written *before* any recording — speakers,
+   utterances, environments, distances, positional offsets, hard negatives,
+   backgrounds, split policy (speaker-disjoint), licences.
+3. **Recording protocol**, then collection — **keeping every raw session**.
+4. **Curate, build, version and fingerprint** the dataset.
+5. **Only then**: features, the streaming evaluation harness (before any model), training.
 
-**Open blockers:** **B-1** authoritative pin map · **B-3** 2.4 GHz Wi-Fi
-credentials. Live detail in `STATUS.md`.
+Hardware bring-up (`BUILD_PLAN.md` Phase A) is independent of the dataset and may proceed
+in parallel once the pin map arrives.
+
+**Open blockers:** **B-1** authoritative pin map · **B-3** 2.4 GHz Wi-Fi credentials ·
+**B-5** no keyword selected · **B-6** no dataset. Live detail in `STATUS.md`.
 
 ## 9. What NOT to redo
 
 Re-deriving settled work is the most likely way to waste this project's budget.
-`CURRENT_HANDOFF.md` §12 has the full list. The short version: do not re-analyse
-the dataset, do not re-litigate the keyword, do not rediscover that positives are
-scarce, do not report clip accuracy as detector accuracy, do not migrate the
-toolchain without a measured reason, and do not optimise for the two out-of-scope
-resource budgets.
+The short version, updated for the dataset-first restart: do not use or cite the
+deprecated corpus for anything; do not report clip accuracy as detector accuracy; do not
+migrate the toolchain without a measured reason; do not optimise for the two out-of-scope
+resource budgets; and do not re-derive the hardware constraints or the architecture —
+both survived the reset intact and are recorded.

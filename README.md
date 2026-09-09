@@ -1,8 +1,10 @@
 # SIH 2026 — PS 26172 · Low-Latency Efficient Voice Activator
 
-Custom keyword spotting for the wake word **`solvani`** on an
-**ESP32-S3-WROOM-1-N16R8** with an **INMP441** I²S MEMS microphone, streaming to
-a remote ASR server after detection.
+Custom keyword spotting on an **ESP32-S3-WROOM-1-N16R8** with an **INMP441** I²S MEMS
+microphone, streaming to a remote ASR server after detection.
+
+> **Status: dataset-first restart.** The previously supplied corpus was deprecated and
+> removed. **No keyword is selected and no dataset exists yet** — see `DATASET.md`.
 
 ```
 INMP441 → I2S/DMA → ring buffer → VAD → MFCC → int8 DS-CNN (TFLM + ESP-NN)
@@ -28,10 +30,10 @@ git clone <repo-url> sih2026 && cd sih2026
 bash scripts/setup.sh --dev                                      # Linux / macOS / Git Bash
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -Dev  # Windows
 
-# place the dataset (not in Git) - see DATASET_SETUP.md
 python scripts/verify_setup.py      # must print READY
-python scripts/verify_dataset.py    # must print PASS
 python scripts/health_check.py      # git state, phase progress, blockers
+
+# NOTE: there is no dataset to place. Building one is the current task - DATASET.md
 ```
 
 The repository clones into **any** directory on Windows or Linux. Nothing
@@ -39,11 +41,12 @@ assumes a drive letter — see [`config/paths.py`](config/paths.py).
 
 ## Status
 
-**Discovery, documentation and portability are complete. No implementation code
-exists yet, and nothing has been measured on hardware in this repository.**
+**Hardware knowledge, architecture, documentation and portability are complete and
+retained. There is no dataset, no keyword, no implementation code, and nothing has been
+measured on hardware in this repository.**
 
-Next task: `BUILD_PLAN.md` **A1 → A2 → B → C**.
-Open blockers: **B-1** authoritative pin map · **B-3** Wi-Fi credentials.
+Next task: **keyword selection, then dataset design** — [`DATASET.md`](DATASET.md) §5.
+Open blockers: **B-5** no keyword · **B-6** no dataset · **B-1** pin map · **B-3** Wi-Fi.
 Live detail in [`STATUS.md`](STATUS.md).
 
 ## Documents
@@ -56,12 +59,13 @@ Live detail in [`STATUS.md`](STATUS.md).
 | [`STATUS.md`](STATUS.md) | Live status, blockers, open risks |
 | [`BUILD_PLAN.md`](BUILD_PLAN.md) | Phases A–I with per-phase exit bars |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design and every justified deviation |
-| [`DATASET.md`](DATASET.md) | Measured dataset analysis |
-| [`DATASET_SETUP.md`](DATASET_SETUP.md) | Obtaining and verifying the dataset |
+| [`DATASET.md`](DATASET.md) | **Dataset status (NOT YET CREATED) and the plan to build one** |
+| [`DATASET_RESET_AUDIT.md`](DATASET_RESET_AUDIT.md) | Audit behind the dataset reset |
+| [`GIT_HISTORY_DATASET_PURGE.md`](GIT_HISTORY_DATASET_PURGE.md) | Why no history rewrite is needed |
 | [`HARDWARE.md`](HARDWARE.md) | Board, microphone, GPIO constraints, toolchain |
 | [`ENVIRONMENT_SETUP.md`](ENVIRONMENT_SETUP.md) | Windows + Linux machine setup |
 | [`EXPERIMENT_STATE.md`](EXPERIMENT_STATE.md) | What has been measured, and what has not |
-| [`DECISIONS.md`](DECISIONS.md) | D-001…D-009, with reasoning and consequences |
+| [`DECISIONS.md`](DECISIONS.md) | D-001…D-010, with reasoning and consequences |
 | [`BUILD_LOG.md`](BUILD_LOG.md) | Append-only log with pre-declared pass bars |
 | [`STORAGE_AUDIT.md`](STORAGE_AUDIT.md) | Historical record of the original machine |
 
@@ -69,31 +73,29 @@ Live detail in [`STATUS.md`](STATUS.md).
 
 ```
 config/          machine-independent path + setting resolution
-scripts/         setup, verification, health check, manifest generation
-tools/           read-only dataset analysis
+scripts/         setup, verification, health check
+tools/           dataset-agnostic audio measurement
 training/        feature pipeline, training, streaming evaluation   (empty)
 firmware/        PlatformIO project - platformio.ini only, no src/  (empty)
 server/          WebSocket audio sink, ASR, intent parser           (empty)
 ui/              live demo dashboard                                (empty)
 docs/            experiment records
-dataset_manifest/ committed dataset fingerprint (counts + checksums)
-data/            the dataset itself - NOT in Git
+data/            recordings + built dataset - NOT in Git (neither exists yet)
 artifacts/       features, checkpoints, models - NOT in Git
 ```
 
 ## The finding that governs this project
 
-> The dataset holds **21,267 WAV files**, which looks generous and is not. The
-> positive class is approximately **110 unique utterances from ONE speaker**,
-> inflated to 790 clips by augmentation. The negative class draws on thousands
-> of speakers.
+> A positive class recorded from **one speaker** cannot be repaired downstream.
+> Augmentation copies information; it does not add any. A predecessor project
+> demonstrated **on hardware** that neither decision-logic tuning nor more public
+> negative speech fixes it.
 
-Augmentation copies information; it does not add any. This asymmetry — not
-architecture, not quantisation, not threshold tuning — decides whether the
-system works. It also forces a discipline the project must not relax: **clip
-classification, streaming detection, false-trigger behaviour, wake-word latency
-and real-world robustness are five different measures** and are never reported
-as one.
+That is why this project restarts dataset-first: **speaker diversity in the positive
+class is the primary design variable**, and it must be planned in before recording,
+not discovered afterwards. It also forces a discipline the project must not relax:
+**clip classification, streaming detection, false-trigger behaviour, wake-word latency
+and real-world robustness are five different measures** and are never reported as one.
 
 ## Honesty policy
 
@@ -110,5 +112,4 @@ distinction mattered.
 Firmware, tooling, analysis and documentation in this repository are developed
 with Claude Code (Anthropic) acting as implementation and analysis assistant.
 Hardware wiring, physical test execution and acceptance decisions are performed
-by the author. All reported measurements come from the actual dataset and the
-actual hardware.
+by the author. All reported measurements come from real data and real hardware.

@@ -1,72 +1,130 @@
-import wave, os, csv, collections, numpy as np, random
+#!/usr/bin/env python3
+"""Audit the format and level statistics of a directory of WAV files.
+
+Dataset-agnostic: point it at any directory and it recurses. It makes no
+assumption about split/class layout, filenames, or a manifest schema.
+
+    python tools/audio_probe.py <directory> [--sample N] [--seed S]
+    python tools/audio_probe.py recordings/session_01
+    python tools/audio_probe.py recordings --sample 0        # 0 = every file
+
+Reports, per the pool it scanned:
+  * format uniformity  - channels, rate, sample width, frame count
+  * duration statistics
+  * level statistics    - RMS, peak, and full-scale (clipped) sample counts
+
+Use this on new recordings BEFORE building a dataset from them. Nothing here is
+specific to any keyword or corpus.
+"""
+
+from __future__ import annotations
+
+import argparse
+import collections
+import random
 import sys
+import wave
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from config.paths import DATASET_FULL
 
-if not DATASET_FULL.is_dir():
-    sys.exit(
-        f"ERROR: dataset not found at {DATASET_FULL}\n"
-        "  The dataset is not stored in Git. See DATASET_SETUP.md to obtain it,\n"
-        "  or set SIH_DATASET_ROOT in .env if it lives elsewhere on this machine."
-    )
+import numpy as np
 
-ROOT = str(DATASET_FULL)
 
-def rd(p):
-    with wave.open(p,'rb') as w:
-        return w.getnchannels(), w.getframerate(), w.getsampwidth(), w.getnframes(), np.frombuffer(w.readframes(w.getnframes()),dtype='<i2')
+def read_wav(path: Path):
+    """Return (channels, rate, sampwidth, nframes, samples_int16_or_None)."""
+    with wave.open(str(path), "rb") as w:
+        ch, rate, sw, n = w.getnchannels(), w.getframerate(), w.getsampwidth(), w.getnframes()
+        raw = w.readframes(n)
+    samples = np.frombuffer(raw, dtype="<i2") if sw == 2 else None
+    return ch, rate, sw, n, samples
 
-rows=[]
-for split in ("train","validation","test"):
-    with open(os.path.join(ROOT,"manifests",split+".csv"),newline='',encoding='utf-8') as f:
-        rows+=list(csv.DictReader(f))
-print("manifest rows:",len(rows))
-# verify files exist
-missing=[r for r in rows if not os.path.exists(os.path.join(ROOT,r['filepath'].replace('/',os.sep)))]
-print("missing files:",len(missing))
-# count actual wavs on disk
-onchdisk=0
-for dp,dn,fn in os.walk(ROOT):
-    onchdisk+=sum(1 for x in fn if x.lower().endswith('.wav'))
-print("wavs on disk:",onchdisk)
 
-# format audit over a large random sample
-random.seed(0)
-samp=random.sample(rows,1500)
-fmt=collections.Counter(); dur=collections.Counter()
-for r in samp:
-    ch,sr,sw,nf,_=rd(os.path.join(ROOT,r['filepath'].replace('/',os.sep)))
-    fmt[(ch,sr,sw)]+=1; dur[nf]+=1
-print("\nformat (ch,rate,samplewidth):",dict(fmt))
-print("frame counts:",dict(dur))
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("directory", type=Path, help="directory to scan recursively for .wav")
+    ap.add_argument("--sample", type=int, default=1500,
+                    help="how many files to probe (0 = all). Default 1500.")
+    ap.add_argument("--seed", type=int, default=0)
+    args = ap.parse_args()
 
-# ---- positive envelope position: where does energy sit inside the 1.0 s window? ----
-pos=[r for r in rows if r['label']=='positive' and r['augmentation']=='none']
-print("\nunaugmented positives:",len(pos))
-ENV=[]; peaks=[]; clip=0; rmsall=[]
-for r in pos:
-    _,_,_,_,x=rd(os.path.join(ROOT,r['filepath'].replace('/',os.sep)))
-    x=x.astype(np.float32)/32768.0
-    if np.max(np.abs(x))>=0.999: clip+=1
-    rmsall.append(float(np.sqrt(np.mean(x**2))))
-    # 20 bins of energy
-    n=len(x); b=np.array([np.sqrt(np.mean(x[i*n//20:(i+1)*n//20]**2)) for i in range(20)])
-    ENV.append(b/ (b.max()+1e-9))
-    peaks.append(int(np.argmax(b)))
-ENV=np.array(ENV)
-print("clipped positives:",clip," rms mean=%.4f min=%.4f max=%.4f"%(np.mean(rmsall),np.min(rmsall),np.max(rmsall)))
-print("\nmean normalised energy envelope across 20 bins (0=start,19=end of the 1.0 s clip):")
-m=ENV.mean(0)
-for i,v in enumerate(m):
-    print(f"  bin {i:2d} [{i*50:4d}-{(i+1)*50:4d} ms]  {v:.3f}  " + "#"*int(v*50))
-print("\npeak-energy bin histogram:", dict(sorted(collections.Counter(peaks).items())))
+    root: Path = args.directory
+    if not root.is_dir():
+        sys.exit(f"ERROR: not a directory: {root}")
 
-# active-speech extent per clip (bins above 25% of that clip's peak)
-first=[];last=[]
-for e in ENV:
-    idx=np.where(e>0.25)[0]
-    first.append(idx[0]); last.append(idx[-1])
-print("\nspeech onset bin: mean=%.1f median=%.1f min=%d max=%d"%(np.mean(first),np.median(first),min(first),max(first)))
-print("speech offset bin: mean=%.1f median=%.1f min=%d max=%d"%(np.mean(last),np.median(last),min(last),max(last)))
-print("=> leading silence mean %.0f ms, trailing silence mean %.0f ms"%(np.mean(first)*50,(19-np.mean(last))*50))
+    files = sorted(root.rglob("*.wav"))
+    if not files:
+        sys.exit(f"ERROR: no .wav files found under {root}")
+
+    pool = files
+    if args.sample and args.sample < len(files):
+        pool = random.Random(args.seed).sample(files, args.sample)
+
+    print("=" * 70)
+    print(f"AUDIO PROBE  {root}")
+    print("=" * 70)
+    print(f"wav files found : {len(files):,}")
+    print(f"files probed    : {len(pool):,}"
+          + ("  (all)" if len(pool) == len(files) else f"  (random, seed={args.seed})"))
+    print()
+
+    formats = collections.Counter()
+    frame_counts = collections.Counter()
+    rms_vals, peak_vals = [], []
+    clipped_files = 0
+    unreadable = []
+
+    for path in pool:
+        try:
+            ch, rate, sw, n, samples = read_wav(path)
+        except Exception as exc:
+            unreadable.append((path, exc))
+            continue
+        formats[(ch, rate, sw)] += 1
+        frame_counts[n] += 1
+        if samples is not None and samples.size:
+            x = samples.astype(np.float32) / 32768.0
+            rms_vals.append(float(np.sqrt(np.mean(x * x))))
+            peak = float(np.max(np.abs(x)))
+            peak_vals.append(peak)
+            if np.any(np.abs(samples) >= 32767):
+                clipped_files += 1
+
+    print("-- format (channels, rate_hz, sample_width_bytes) --")
+    for fmt, count in formats.most_common():
+        pct = 100.0 * count / max(1, len(pool) - len(unreadable))
+        print(f"  {fmt}  {count:>7,}  {pct:6.2f} %")
+    if len(formats) == 1:
+        print("  => uniform")
+    else:
+        print("  => MIXED FORMATS - resolve before building a dataset")
+    print()
+
+    print("-- frame count (clip length in samples) --")
+    for n, count in frame_counts.most_common(8):
+        rate = next(iter(formats))[1] if formats else 16000
+        print(f"  {n:>8,} frames ({n / rate:6.3f} s)  {count:>7,} files")
+    if len(frame_counts) > 8:
+        print(f"  ... and {len(frame_counts) - 8} other lengths")
+    print(f"  => {'uniform' if len(frame_counts) == 1 else 'VARIABLE length'}")
+    print()
+
+    if rms_vals:
+        r = np.array(rms_vals)
+        p = np.array(peak_vals)
+        print("-- levels (normalised to full scale = 1.0) --")
+        print(f"  RMS   min {r.min():.4f}  mean {r.mean():.4f}  max {r.max():.4f}")
+        print(f"  peak  min {p.min():.4f}  mean {p.mean():.4f}  max {p.max():.4f}")
+        print(f"  files containing a full-scale sample (clipping): {clipped_files} "
+              f"({100.0 * clipped_files / len(rms_vals):.1f} %)")
+        print()
+
+    if unreadable:
+        print(f"-- UNREADABLE: {len(unreadable)} file(s) --")
+        for path, exc in unreadable[:5]:
+            print(f"  {path.name}: {exc}")
+    print("=" * 70)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

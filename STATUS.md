@@ -1,8 +1,10 @@
 # STATUS.md
 
-**Last updated:** 2026-09-09 · **Phase:** Discovery + bootstrap **COMPLETE**; storage/environment
-prep **COMPLETE**; transition verification **PASSED**; **cross-machine handoff prepared**.
-**Next:** `BUILD_PLAN.md` **A1–A2**, then **B**, then **C**. Awaiting the user's go-ahead.
+**Last updated:** 2026-09-09 · **Phase:** **DATASET-FIRST RESTART**
+
+> **The supplied dataset was deprecated and removed from the project** (`DECISIONS.md` D-010,
+> `DATASET_RESET_AUDIT.md`). **There is no approved dataset and no selected keyword.**
+> **Next:** keyword selection, then dataset design — `DATASET.md` §5.
 
 **The repository is now machine-independent** (`DECISIONS.md` D-009). It can be cloned into
 any directory on Windows or Linux; all paths resolve through `config/paths.py`. Start a new
@@ -17,11 +19,14 @@ there). Port names differ per machine — never hard-code one.
 
 | Stage | State |
 |---|---|
-| Discovery (docs, dataset, hardware, toolchain) | ✅ complete |
-| Project documentation bootstrapped | ✅ complete |
+| Hardware + toolchain discovery | ✅ complete, retained |
+| Architecture design | ✅ complete, retained |
+| Project documentation | ✅ complete |
 | Cross-machine portability + handoff | ✅ complete (D-009) |
 | Machine setup / verification / health scripts | ✅ complete |
-| Committed dataset fingerprint (`dataset_manifest/`) | ✅ complete |
+| **Keyword selected** | ❌ **none — selection reopened** |
+| **Approved dataset** | ❌ **none — must be built from scratch** |
+| Raw recordings collected | ❌ none |
 | Python environment | ❌ not created (scripted: `scripts/setup.*`) |
 | Firmware skeleton | 🟡 `firmware/platformio.ini` committed; **no source yet** |
 | Feature pipeline | ❌ not written |
@@ -71,6 +76,17 @@ Fallback is weaker than assumed: the adapter reports `Hosted network supported: 
 legacy SoftAP path is unavailable; Windows Mobile Hotspot may still work via WiFi-Direct but
 is untested.
 
+### 🔴 B-5 — No keyword selected
+Keyword selection was reopened by the dataset reset (`DECISIONS.md` D-010, which voids D-002).
+There is **no incumbent** — the deprecated corpus' keyword carries no weight. Criteria must be
+defined first, then a choice made and recorded as a new decision.
+**Blocks:** everything dataset-related, therefore B-6 and all of training.
+
+### 🔴 B-6 — No approved dataset
+`DATASET.md` status is **NOT YET CREATED**. No recordings have been collected.
+**Blocks:** feature pipeline, evaluation harness, training, quantisation, on-device KWS.
+**Does NOT block:** hardware bring-up, firmware skeleton, server/UI scaffolding.
+
 ### 🟢 B-4 — C: free space — RESOLVED as far as is safely possible
 Was 0 bytes. A cache-only cleanup on 2026-09-09 recovered **12.36 GB**; C: now holds
 **12.84 GB free (10.85 %)**. Every tool was re-verified working afterwards (pip, npm,
@@ -85,26 +101,21 @@ use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets t
 
 | # | Risk | Note |
 |---|---|---|
-| R-1 | **Positive class = 110 utterances, one speaker, two rooms** | The project's binding constraint. `DECISIONS.md` D-004, `BUILD_PLAN.md` Phase D |
-| R-2 | Test split has **17** positive utterances | ~±20 pp confidence interval; the streaming harness is the real bar |
-| R-3 | No speaker-independence is possible from this data | No such claim may be made |
-| R-4 | Training is **CPU-only** (Intel UHD 630, no CUDA) | Fine for a small DS-CNN; rules out large architecture searches |
-| R-5 | E: is a HDD | Cache features to `.npz`; do not re-read 21k WAVs per epoch |
-| R-6 | Idle CPU will be ~48 % in Phase 1 | Declared Phase-2 debt, displayed on the dashboard (`DECISIONS.md` D-008) |
-| R-7 | The raw uncut recordings (`Desktop/data/`) are **confirmed absent from all three drives** — four independent searches, `STORAGE_AUDIT.md` §11 | Positives cannot be re-cut at new offsets; `DATASET.md` §9. `D:\speech_commands` (5.37 GB, Speech Commands v0.02) *is* present and usable for negatives/background |
+| R-1 | **Collecting a genuinely multi-speaker positive class is the hardest part of the new dataset** | It is also the one that decides the project. Plan it before recording — `DATASET.md` §2 |
+| R-2 | A small test split gives a wide confidence interval on any rate | Size the test split deliberately during dataset design |
+| R-3 | Speaker-independence is only claimable if the test split is **speaker-disjoint** | Build that into the split policy from the start |
+| R-4 | Training may be **CPU-only** depending on the machine | Fine for a small DS-CNN; rules out large architecture searches |
+| R-5 | Feature extraction over many small WAVs is I/O-bound on a HDD | Cache features to a single `.npz`; do not re-read audio each epoch |
+| R-6 | Idle CPU will be high in Phase 1 | Declared Phase-2 debt, displayed on the dashboard (`DECISIONS.md` D-008) |
+| R-7 | **Losing raw recordings would be unrecoverable** | The deprecated corpus could not be re-cut because its raw sessions were lost. **Keep every raw session** under `data/recordings` |
 
 ---
 
-## Verified in this session (measured here, not assumed)
+## Verified on the original machine (measured, not assumed)
 
-- Dataset: 21,267 WAVs; **100 %** of a 1,500-file random sample is mono / 16 kHz / 16-bit /
-  exactly 16,000 frames. 0 files missing against the manifests.
-- Split leakage: **0 of 2,387** source recordings appear in more than one split, in either
-  dataset variant. The split is genuinely recording-disjoint.
-- Positives: 790 clips from **110 unique recordings**, `speaker_01` only, environments
-  `fan` (60) and `classroom` (50).
-- Keyword position: ~545 ms active span, peak-bin std ±255 ms — loosely centred with real spread.
-- Speech-band energy fraction: positive 0.561 / negative 0.662 / **background 0.538**.
+> Dataset measurements previously listed here were removed with the dataset reset
+> (`DECISIONS.md` D-010). They described the deprecated corpus and are out of scope.
+
 - Host: i3-8100 4C/4T, 15.9 GB RAM, no CUDA, Windows 11 Pro 26200.
 - Toolchain: PlatformIO 6.1.19, `espressif32@7.1.1`, Arduino core 2.0.17, **ESP-IDF 4.4**,
   Python 3.13.9 with TensorFlow 2.20.0.
@@ -114,8 +125,10 @@ use; re-running `STORAGE_AUDIT.md` §9 is safe and repeatable whenever C: gets t
 
 ## Immediate next actions
 
-1. **Unblocked, ready to start:** A1 (venv on E:), A2 (PlatformIO skeleton with `upload_port`
-   = **COM7** and `build_dir` on E:), then Phase B and Phase C.
-2. **Still needed from the user:** the authoritative pin map (**B-1**) and the 2.4 GHz Wi-Fi
+1. **Keyword selection** — define the criteria, choose, record it as a decision (**B-5**).
+2. **Dataset design specification** — written before any recording (**B-6**). `DATASET.md` §5.
+3. **In parallel, hardware-side and dataset-independent:** environment setup (A1), the
+   PlatformIO skeleton (A2), and — once the pin map arrives — bring-up A3–A6.
+4. **Still needed from the user:** the authoritative pin map (**B-1**) and the 2.4 GHz Wi-Fi
    SSID + password (**B-3**).
-3. Resolved: board attached (B-2), C: free space (B-4).
+5. Resolved: board attached (B-2), C: free space (B-4).

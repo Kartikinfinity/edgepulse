@@ -22,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config.paths import (  # noqa: E402
     DATASET_ROOT,
     ENV_FILE,
-    MANIFEST_DIR,
     PROJECT_ROOT,
+    RECORDINGS_ROOT,
     UPLOAD_PORT,
 )
 
@@ -47,7 +47,7 @@ EXPECTED_DOCS = [
     "CLAUDE.md", "README.md", "STATUS.md", "BUILD_PLAN.md", "ARCHITECTURE.md",
     "DATASET.md", "HARDWARE.md", "DECISIONS.md", "BUILD_LOG.md",
     "PROJECT_STATE.md", "CURRENT_HANDOFF.md", "ENVIRONMENT_SETUP.md",
-    "DATASET_SETUP.md", "EXPERIMENT_STATE.md",
+    "EXPERIMENT_STATE.md",
 ]
 
 
@@ -150,28 +150,18 @@ def main() -> int:
     print()
 
     # 6. Dataset ------------------------------------------------------------
-    print("6. Dataset  [REQUIRED for Phases B-E]")
-    if not DATASET_ROOT.is_dir():
-        print(f"  {BAD} not found at {DATASET_ROOT}")
-        print("        See DATASET_SETUP.md.")
-        required_failures.append("dataset")
-    else:
-        n_wav = sum(1 for _ in DATASET_ROOT.rglob("*.wav"))
-        print(f"  {OK} present: {DATASET_ROOT}")
-        print(f"       {n_wav:,} wav files found")
-        if (MANIFEST_DIR / "manifest.json").is_file():
-            import json
-            man = json.loads((MANIFEST_DIR / "manifest.json").read_text(encoding="utf-8"))
-            exp = man["totals"]["wav_files"]
-            if n_wav == exp:
-                print(f"  {OK} count matches manifest ({exp:,})")
-            else:
-                print(f"  {BAD} expected {exp:,} wav files, found {n_wav:,}")
-                required_failures.append("dataset count")
-            print("       run scripts/verify_dataset.py for a checksum verification")
+    # There is deliberately NO approved dataset: the previous corpus was deprecated
+    # (DECISIONS.md D-010) and building a new one is the current task. Its absence is
+    # therefore reported as expected state, NOT as a failure.
+    print("6. Dataset  [none expected yet - see DATASET.md]")
+    print(f"  {OK} status: NOT YET CREATED (by design)")
+    for label, path in (("dataset", DATASET_ROOT), ("recordings", RECORDINGS_ROOT)):
+        if path.is_dir():
+            n_wav = sum(1 for _ in path.rglob("*.wav"))
+            print(f"  {OK} {label:<11}{path}  ({n_wav:,} wav)")
         else:
-            print(f"  {WARN} dataset_manifest/manifest.json absent - cannot cross-check")
-            warnings.append("no dataset manifest")
+            print(f"  {OK} {label:<11}{path}  (absent, as expected)")
+    print("       Next: select a keyword, then design the dataset - DATASET.md 5")
     print()
 
     # Summary ---------------------------------------------------------------
