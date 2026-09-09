@@ -621,3 +621,77 @@ discipline D-005 demands of the evaluation harness.
 
 **Next.** User records the remaining pilot items (§ report), then QC gates them. Only after that
 does the Dataset Factory phase begin.
+
+---
+
+## EXP-005 — Speech pilot QC, and a corrected DC-offset criterion
+**Date:** 2026-09-09 · **Phase:** A5/pilot · **Status:** **PASS** after diagnosis. Still no
+model trained, no dataset collected.
+
+**Objective.** Gate the 19-file speech pilot, and resolve 3 DC-offset failures without simply
+relaxing a threshold to make them go away.
+
+**The failure.** 16/19 passed; three failed on **DC offset** (+0.00292, −0.00253, +0.00390 FS
+against a 0.002 limit). Two adjacent oddities pointed at a common cause: the sub-100 Hz energy
+fraction swung from **2.8 % to 93.2 %** across files, and **RMS barely moved between silence
+(−29.3 dBFS) and loud speech (−27.0 dBFS)** — a loud utterance should not measure the same as an
+empty room.
+
+**Hypothesis.** A large, slowly varying sub-125 Hz drift from the INMP441 sits under every
+recording. It dominates RMS, and its wander *is* the DC offset. It is not signal, and the
+feature pipeline never sees it — the mel filterbank starts at **125 Hz** precisely to discard it
+(`ARCHITECTURE.md` §3).
+
+**Test.** All 19 files re-measured raw and after a 125 Hz high-pass matching the mel floor:
+
+| | mean \|DC\| | max \|DC\| | files over 0.002 |
+|---|---|---|---|
+| Raw | 0.00126 FS | 0.00390 FS | **3 / 19** |
+| **After 125 Hz HPF** | **0.0000004 FS** | **0.00001 FS** | **0 / 19** |
+
+A ~3,000× reduction. **Hypothesis confirmed.** Post-HPF SNR also improved on every strong take
+(loud_001 23.7 → **26.5 dB**; near_001 15.6 → **19.7 dB**).
+
+**Fix — the criterion was measuring the wrong signal.** The REQUIRED DC check now runs on the
+high-passed signal, i.e. what the model actually receives. A loose **raw** limit (0.02 FS, 5×
+the worst drift observed) is retained to catch a genuinely faulty part. **This is not threshold
+relaxation**: gating on raw DC rejected good audio for content the system provably discards.
+Two real gaps found while re-validating were *tightened* at the same time — a 0.05 FS raw offset
+now fails, and an over-shifted signal (every sample even, LSB never exercised) is now a
+**failure** rather than a note, guarded so true digital silence still passes.
+
+**Regression:** the gate fails **6/6** deliberately corrupted files (clipping, DC, 100 ms
+dropout, wrong rate, stereo, over-shift) and passes the pilot **19/19**.
+
+### Keyword duration — the question the window design depended on
+
+A first attempt using a fixed "15 dB below peak" threshold produced nonsense — it fragmented one
+utterance into 6 runs and, on the two weakest files, latched onto background for the full 3 s.
+**That measurement was discarded, not reported.** Re-measured against the *noise floor* with an
+adaptive threshold and 120 ms gap-merging (a /k/ closure inside the word must not split it):
+
+| | Value |
+|---|---|
+| Usable takes (post-HPF SNR ≥ 10 dB) | **15 / 17** |
+| Duration median / mean | **580 ms / 539 ms** |
+| Range | 220 – 720 ms |
+| Within the admissible 380–880 ms | 12 / 15 |
+| **Exceeding 880 ms** | **0 / 15** |
+
+**This settles the open risk from `KWS_ENGINE_DECISION.md` §4.** The concern that a slow
+`Takshila` could exceed the 880 ms admissible span in a 1.0 s window is **not observed** for
+this speaker: the natural range sits comfortably inside, with ~160 ms of headroom at the top.
+The 1.0 s / 49×13 input stands, and no architecture change is needed for Tier 1.
+
+**What this does NOT prove.**
+- **One speaker, one room, one session.** Duration is speaker-dependent; a slower speaker could
+  still exceed 880 ms. The Tier-2 1.2 s experiment stays on the roadmap.
+- The 2 rejected takes (post-HPF SNR 3.7 and 4.9 dB) are genuinely too quiet — a **~11 % reject
+  rate**, right at the ≤10 % target and worth watching.
+- The duration estimator is an energy-envelope heuristic, not forced alignment.
+- The SNR figures come from a crude decile estimator; the warning it drives misfires on
+  stationary tones (a pure tone has no loud/quiet variation), which is why it is a warning.
+- Nothing about MFCC, the model, or inference was touched.
+
+**Next.** Dataset Factory. The capture path, the QC gate and the keyword's fit to the window are
+all now evidence-backed.

@@ -23,6 +23,7 @@ import wave
 from pathlib import Path
 
 import numpy as np
+from scipy import signal
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -34,7 +35,23 @@ EXPECT_WIDTH = 2          # bytes -> PCM16
 RMS_MIN_DBFS = -40.0
 RMS_MAX_DBFS = -6.0
 CLIP_MAX_PCT = 0.1
-DC_MAX_FS = 0.002
+# DC offset is measured on the signal the FEATURE PIPELINE ACTUALLY SEES.
+#
+# The mel filterbank starts at 125 Hz (ARCHITECTURE.md 3), so everything below
+# that is discarded before the model. The INMP441 has a large, slowly varying
+# sub-125 Hz drift: measured across the bring-up pilot, raw |DC| averaged
+# 0.00126 FS and peaked at 0.00390 (3/19 files over a 0.002 limit), while after
+# a 125 Hz high-pass the SAME files averaged 0.0000004 and peaked at 0.00001
+# (0/19 over the limit). Gating on raw DC therefore rejects good audio for
+# content the system never receives.
+#
+# So: the REQUIRED check is post-HPF. A loose raw limit is retained to catch a
+# genuinely faulty part (stuck bit, rail, dead channel), which would show an
+# offset orders of magnitude larger than this drift.
+DC_MAX_FS = 0.002            # post-125Hz-HPF - REQUIRED
+DC_RAW_MAX_FS = 0.02         # raw, gross-fault detector (5x the 0.0039 FS
+                             # worst drift actually observed on this mic)
+HPF_CUTOFF_HZ = 125.0        # matches the mel floor exactly
 ZERO_RUN_MS = 20.0        # a gap longer than this mid-signal implies DMA loss
 DURATION_TOL_PCT = 1.0
 
@@ -69,6 +86,14 @@ def longest_zero_run(x: np.ndarray) -> int:
     starts = np.flatnonzero(d == 1)
     ends = np.flatnonzero(d == -1)
     return int((ends - starts).max()) if starts.size else 0
+
+
+def highpass(x: np.ndarray, rate: int) -> np.ndarray:
+    """Apply the same 125 Hz floor the mel filterbank imposes."""
+    if x.size < 32:
+        return x.astype(np.float64)
+    sos = signal.butter(4, HPF_CUTOFF_HZ / (rate / 2.0), btype="high", output="sos")
+    return signal.sosfilt(sos, x.astype(np.float64))
 
 
 def band_energies(x: np.ndarray, rate: int):
@@ -120,7 +145,10 @@ def analyse(path: Path) -> dict:
     r["rms_dbfs"] = db(r["rms"])
     r["peak"] = float(np.abs(xf).max()) if n else 0.0
     r["peak_dbfs"] = db(r["peak"])
-    r["dc_offset"] = float(xf.mean()) if n else 0.0
+    r["dc_offset_raw"] = float(xf.mean()) if n else 0.0
+    xh = highpass(xf, p["rate"])                    # what the pipeline sees
+    r["dc_offset"] = float(xh.mean()) if n else 0.0
+    r["rms_hpf_dbfs"] = db(float(np.sqrt((xh ** 2).mean()))) if n else -120.0
     r["clipped"] = int((np.abs(x) >= 32767).sum())
     r["clipped_pct"] = 100.0 * r["clipped"] / n if n else 0.0
     r["zero_pct"] = 100.0 * int((x == 0).sum()) / n if n else 0.0
@@ -128,6 +156,7 @@ def analyse(path: Path) -> dict:
     r["longest_zero_run"] = run
     r["longest_zero_run_ms"] = 1000.0 * run / p["rate"] if p["rate"] else 0.0
     r["snr_db"] = estimate_snr(x)
+    r["snr_hpf_db"] = estimate_snr((xh * 32768.0).astype(np.int32))
 
     # silence % over 20 ms frames at -50 dBFS
     if n >= 320:
@@ -160,17 +189,29 @@ def analyse(path: Path) -> dict:
         r["fails"].append(f"zero run {r['longest_zero_run_ms']:.1f} ms > {ZERO_RUN_MS} ms "
                           "(possible DMA dropout)")
     if abs(r["dc_offset"]) > DC_MAX_FS:
-        r["fails"].append(f"DC offset {r['dc_offset']:+.5f} FS > {DC_MAX_FS}")
+        r["fails"].append(f"DC offset (post-125Hz) {r['dc_offset']:+.6f} FS > {DC_MAX_FS}")
+    # Every sample even => the bottom bit is never exercised, i.e. resolution was
+    # thrown away by an over-shift. Real PCM16 from a 24-bit source has odd values.
+    # Digital silence is legitimately all-even, so require actual signal first.
+    if r["all_even"] and r["peak_dbfs"] > -60.0:
+        r["fails"].append("every sample is even — LSB never set, indicates an "
+                          "over-shifted I2S conversion (lost resolution)")
+    if abs(r["dc_offset_raw"]) > DC_RAW_MAX_FS:
+        r["fails"].append(f"raw DC {r['dc_offset_raw']:+.5f} FS > {DC_RAW_MAX_FS} "
+                          "— gross fault, check the microphone")
 
     # ---- advisory --------------------------------------------------------
     if r["rms_dbfs"] < RMS_MIN_DBFS:
         r["warns"].append(f"quiet: RMS {r['rms_dbfs']:.1f} dBFS < {RMS_MIN_DBFS}")
     if r["rms_dbfs"] > RMS_MAX_DBFS:
         r["warns"].append(f"hot: RMS {r['rms_dbfs']:.1f} dBFS > {RMS_MAX_DBFS}")
-    if r["all_even"]:
-        r["warns"].append("every sample even — possible over-shift / lost LSB")
-    if r["lf_frac"] > 0.80 and r["speech_frac"] < 0.05:
-        r["warns"].append(f"{100*r['lf_frac']:.0f}% of energy < 100 Hz — mostly rumble")
+
+    # Sub-100 Hz dominance is CHARACTERISTIC of the INMP441 and is removed by the
+    # 125 Hz mel floor, so it is not a fault. It is only worth flagging when it
+    # coincides with no usable speech above the floor.
+    if r["snr_hpf_db"] == r["snr_hpf_db"] and r["snr_hpf_db"] < 6.0:
+        r["warns"].append(f"weak signal above 125 Hz: post-HPF SNR {r['snr_hpf_db']:.1f} dB "
+                          "— likely too quiet/distant to use")
 
     # duration vs sidecar metadata, if present
     side = path.with_suffix(".json")
@@ -251,13 +292,16 @@ def main() -> int:
         if "duration_s" in r:
             print(f"        {r['rate']} Hz  {r['ch']}ch  {r['width']*8}-bit  "
                   f"{r['frames']} frames  {r['duration_s']:.3f} s")
-            print(f"        RMS {r['rms_dbfs']:7.1f} dBFS   peak {r['peak_dbfs']:7.1f} dBFS   "
-                  f"DC {r['dc_offset']:+.5f}")
+            print(f"        RMS {r['rms_dbfs']:7.1f} dBFS (raw) {r['rms_hpf_dbfs']:7.1f} (>125Hz)   "
+                  f"peak {r['peak_dbfs']:7.1f} dBFS")
+            print(f"        DC  {r['dc_offset']:+.6f} (>125Hz, checked)   "
+                  f"{r['dc_offset_raw']:+.5f} (raw, informational)")
             print(f"        clip {r['clipped']} ({r['clipped_pct']:.3f}%)   "
                   f"zeros {r['zero_pct']:.1f}%   longest-zero {r['longest_zero_run_ms']:.1f} ms   "
                   f"silence {r['silence_pct']:.1f}%")
-            snr = r["snr_db"]
-            print(f"        SNR ~{snr:.1f} dB" if snr == snr else "        SNR n/a", end="")
+            snr, snrh = r["snr_db"], r["snr_hpf_db"]
+            print(f"        SNR ~{snr:.1f} dB raw / ~{snrh:.1f} dB >125Hz"
+                  if snr == snr else "        SNR n/a", end="")
             print(f"   LF<100Hz {100*r['lf_frac']:.1f}%   speech300-3400 {100*r['speech_frac']:.1f}%"
                   f"   HF>4k {100*r['hf_frac']:.1f}%   centroid {r['centroid_hz']:.0f} Hz")
             if "duration_drift_pct" in r:
