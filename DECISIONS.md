@@ -304,3 +304,48 @@ decision records the instruction and its consequences rather than arguing for it
   be reintroduced when its structure is known. Audio never enters Git.
 - **No Git history rewrite was performed and none is required** — no dataset binary was ever
   committed. Analysis in `GIT_HISTORY_DATASET_PURGE.md`.
+
+---
+
+## D-011 — Custom wake keyword: `Takshila` **(PROPOSED — not yet binding)**
+
+**Date:** 2026-09-09 · **Status:** **proposed, awaiting user confirmation** · Supersedes the
+void D-002 · Full research: `KEYWORD_SELECTION.md`
+
+**Proposed decision.** The custom wake keyword is **`Takshila`**, /t̪əkˈʃiː.laː/ —
+3 syllables, 7 phonemes, structure CVC·CV·CV.
+
+**Why, in one paragraph.** It clears every published structural threshold (7 phonemes against
+Picovoice's 6-phoneme floor; 3 syllables inside both Picovoice's 2–4 and Espressif's 3–6), and
+it maximises *distinct* phonetic elements — 4 manner classes across 5 places of articulation —
+which is the property FakeWake identifies as protective, having shown that detectors relying on
+fewer distinctive elements produce significantly more fuzzy words. It satisfies all four Indian
+English constraints that eliminate most candidates: no /v/~/w/ contrast, no dental fricative, no
+cluster requiring epenthesis, and three maximally separated vowels (/ə/–/iː/–/aː/). Its one
+juncture, क्ष, is a **native conjunct for Indian speakers but rare in general English** — an
+asymmetry that lowers FRR for our users and FAR against English background speech at the same
+time. Its /ʃ/ places sustained energy in the 3–8 kHz band the INMP441 resolves most cleanly,
+above the sub-100 Hz region carrying 64.6 % of its noise energy `[prior-build]`. At ~0.6 s it
+fits the existing 1.0 s / 49×13 input with no architecture change.
+
+**Two rejections that carry general lessons.**
+- **Space-topical keywords are disqualified by their aptness.** `Antariksh` and `Nakshatra`
+  score highest on ISRO resonance and worst on false activation, because they are exactly the
+  words spoken aloud at a space-themed demonstration, in front of the judges.
+- **Common given names are disqualified.** In the Indian deployment context, someone calling a
+  person across the room is an uncontrolled trigger source. This is what ranks `Chetaki`
+  (*Chetan*), `Sanjika` (*Sanjay/Sanjana*), `Kalpana` and `Sanketa` below the recommendation.
+
+**Consequences if confirmed.**
+- One word, not two: a carrier phrase would exceed the 1.0 s window and force a larger input,
+  which the prior build measured at a **26.6×** inference penalty `[prior-build]`.
+- The hard-negative set is defined by the **क्ष family** (*shiksha*, *raksha*, *lakshya*) and the
+  **/tæks/ family** (*taxi*, *tax*, *tactical*) — both must be in **training**, not only test.
+- Positive recordings must cover the reduced fast-speech form *kshila* and the mispronunciation
+  *Taxila*.
+
+**Known risk, stated plainly.** Every false-alarm claim in the research is a **prediction from
+published phonetics, not a measurement**. The Phase-C streaming harness measures the truth. If
+the measured FA/hour is unacceptable, the correct response is to **revisit the keyword**, not to
+tune the threshold — `DECISIONS.md` D-005 and the predecessor's experience are unambiguous that
+decision-logic tuning does not create detection capability.

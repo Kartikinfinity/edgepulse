@@ -76,11 +76,15 @@ Fallback is weaker than assumed: the adapter reports `Hosted network supported: 
 legacy SoftAP path is unavailable; Windows Mobile Hotspot may still work via WiFi-Direct but
 is untested.
 
-### 🔴 B-5 — No keyword selected
-Keyword selection was reopened by the dataset reset (`DECISIONS.md` D-010, which voids D-002).
-There is **no incumbent** — the deprecated corpus' keyword carries no weight. Criteria must be
-defined first, then a choice made and recorded as a new decision.
-**Blocks:** everything dataset-related, therefore B-6 and all of training.
+### 🟡 B-5 — Keyword: research complete, **awaiting user confirmation**
+The selection research is done — `KEYWORD_SELECTION.md`: 18 candidates, a weighted 20-criterion
+matrix, phonetic analysis, hard-negative derivation and a licence audit, all against current
+published sources (Picovoice, Espressif ESP-SR, FakeWake, Schönherr et al., Amazon's wake-word
+patent, Indian English phonology).
+
+**Recommendation: `Takshila` /t̪əkˈʃiː.laː/** — 3 syllables, 7 phonemes, 4 manner classes.
+**Not yet binding.** Confirm or reject, then it is recorded as D-011.
+**Blocks:** B-6 and everything downstream of the dataset.
 
 ### 🔴 B-6 — No approved dataset
 `DATASET.md` status is **NOT YET CREATED**. No recordings have been collected.

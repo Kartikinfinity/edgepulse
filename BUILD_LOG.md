@@ -299,3 +299,76 @@ most valuable thing carried across the reset.
 **Next.** Keyword selection (blocker **B-5**), then the dataset design specification
 (**B-6**) — `DATASET.md` §5. Hardware bring-up remains independent and unblocked apart from
 the pin map.
+
+---
+
+## EXP-001 — Custom wake keyword selection (research)
+**Date:** 2026-09-09 · **Phase:** dataset-first Phase 0.1 · **Status:** PASS (recommendation
+delivered; **not yet a binding decision**)
+
+**Objective.** Determine, scientifically rather than aesthetically, the optimal custom wake
+keyword for this product, and specify the dataset that must follow from it. Nothing trained,
+nothing collected.
+
+**Pre-declared pass bar.** (1) Current official Espressif ESP-SR documentation and current
+credible KWS research consulted on the web, not from memory; (2) ≥10 candidates evaluated
+against all 20 requested criteria with a transparent, weighted rubric that a deliberately bad
+control fails; (3) phonetic analysis grounded in the *speaker population's* phonology, not
+generic English; (4) hard negatives derived by a method the literature supports; (5) every
+external data source licence-checked with commercial-use status; (6) all 15 required outputs
+produced; (7) no keyword selected without the research behind it.
+
+**Method.** Read the official requirement audit for PS26172 and the ISRO context reconstruction
+from the project's own research base. Fetched Espressif's ESP-SR wake-word customization
+specification and Picovoice's wake-word selection guidance directly. Searched and read current
+research: FakeWake (arXiv 2109.09958), Schönherr et al. accidental triggers (arXiv 2008.00508),
+Amazon's wake-word evaluation patent US9275637B1, Sensory's 2026 custom wake word guide, and
+KWS evaluation-metric conventions. Compiled Indian English phonological constraints from OED
+and IJSCL. Licence-audited seven external corpora and one TTS engine.
+
+**Measurements / findings.**
+
+| Finding | Source |
+|---|---|
+| ≥6 phonemes required; "Alexa" = 6, "OK Google" = 8; 2–4 syllables; phonetic variety over length | Picovoice |
+| Espressif's production bar: **>500 speakers, ≥100 children, ≥20,000 entries**, <40 dB room, 1 m + 3 m × 15 reps | ESP-SR docs |
+| False accepts concentrate on **phonetic snippets, not whole-word similarity**; **Levenshtein distance fails** to separate fuzzy from non-fuzzy; sparse-feature detectors produce more fuzzy words; 130 fuzzy words for Echo Dot, 322 for AliGenie; >40 % survive volume/speed/noise change | FakeWake |
+| An Echo Dot reliably fired on **89 words**, some phonetically distant from "Alexa" | Schönherr et al. |
+| Wake-word candidates should be scored by **how often their phone sequence occurs in general speech** | US9275637B1 |
+| Indian English: **/v/~/w/ merge**, dental fricatives → stops, reduced vowel inventory, cluster simplification | OED, IJSCL |
+| Licences: LibriSpeech CC BY 4.0 · Speech Commands CC BY 4.0 · MUSAN CC/public-domain, commercial-safe · OpenSLR-28 RIRs Apache 2.0 · Common Voice **CC0** · **ESC-50 CC BY-NC 3.0 (non-commercial only)** · Piper TTS moved MIT → **GPL-3.0** | vendor/dataset sources |
+
+18 candidates scored on a weighted 20-criterion rubric. Result: **Takshila 149**, Hey Takshila
+137, Sanjika 134, Chatika 132, Shalaka 130, Chetaki 129 … Solvani (deprecated incumbent) **95**,
+and the deliberately-bad control "Go" **58** — a 2.5× separation confirming the rubric
+discriminates.
+
+**Analysis.** Three findings did real work. **First**, the industrial bar is ~500 speakers and we
+will manage 20–40, so robustness must be bought through keyword choice — the one free lever —
+and FakeWake says the currency is *distinct phonetic elements*, not length. **Second**, Indian
+English phonology *eliminates* candidates rather than merely ranking them, and it retired the
+deprecated incumbent on evidence: `Solvani`'s medial /ʋ/ sits exactly on the /v/~/w/ merger, and
+the predecessor had already generated a ten-item confusable list for it before collecting data.
+**Third**, and least obvious: **a semantically apt keyword is a false-alarm liability in
+proportion to its aptness.** `Antariksh` and `Nakshatra` score highest on ISRO resonance and are
+disqualified by it, because they are the words that will be spoken aloud at a space-themed
+demonstration. The same logic retires common given names, which is the dominant uncontrolled
+trigger source in this deployment context.
+
+The one-word-versus-phrase question was settled on **our own architecture** rather than generic
+advice: a carrier phrase runs ~1.0–1.2 s and does not fit the fixed 49×13 = 1.0 s input, and the
+prior build measured a **26.6×** inference penalty for enlarging that input `[prior-build]`.
+
+**What this does NOT prove.**
+- **No false-alarm rate here has been measured.** Every FA claim is a prediction from published
+  phonetics. The Phase-C streaming harness is what will falsify or confirm it.
+- No audio has been recorded, no speaker recruited, no model trained.
+- The `[prior-build]` microphone and inference figures used in the argument remain unverified in
+  this tree.
+- The rubric's weights are a defensible judgement, not an objective truth; a different weighting
+  could promote Sanjika or Chatika. The top group is close and the argument, not the arithmetic,
+  is what should be scrutinised.
+
+**Next.** User confirms or rejects `Takshila`. On confirmation, D-011 becomes binding and Phase
+0.2 begins: the recording protocol and a single pilot session, measured with
+`tools/audio_probe.py` and `tools/audio_probe_bands.py`, before any speaker is recruited.

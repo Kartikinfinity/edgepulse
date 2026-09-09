@@ -4,9 +4,13 @@
 DATASET STATUS:
     NOT YET CREATED
 
+KEYWORD:
+    RECOMMENDED "Takshila" - research complete, awaiting confirmation
+    (KEYWORD_SELECTION.md, DECISIONS.md D-011 proposed)
+
 NEXT OBJECTIVE:
-    Select the optimal custom keyword, then design and build the
-    project-specific KWS dataset from first principles.
+    Confirm the keyword, then write the recording protocol and run one
+    pilot session before recruiting speakers.
 ```
 
 **Last updated:** 2026-09-09 · **Status:** reset · See `DATASET_RESET_AUDIT.md` for the audit
@@ -16,13 +20,14 @@ that produced this state and `DECISIONS.md` **D-010** for the decision.
 
 ## 1. Current state
 
-There is **no approved dataset for this project**. There is no keyword either — keyword
-selection was reopened by the same reset and is now the *first* task, not an inherited fact.
+There is **no approved dataset for this project**. Keyword selection was reopened by the reset
+and the research is now **complete**: `KEYWORD_SELECTION.md` recommends **`Takshila`**, awaiting
+your confirmation before it becomes binding (D-011).
 
 | Item | State |
 |---|---|
 | Approved dataset | ❌ none |
-| Selected keyword | ❌ none — selection reopened |
+| Selected keyword | 🟡 **`Takshila` recommended**, awaiting confirmation |
 | Raw recordings | ❌ none collected |
 | Feature caches | ❌ none |
 | Trained model | ❌ none, in this project or any predecessor still in scope |
@@ -101,10 +106,11 @@ Removed with the reset, recoverable from git history at commit `2c4500c` if ever
 
 In order. **None of it has started, and none of it may be skipped.**
 
-1. **Keyword selection.** Define the criteria first — phonetic distinctiveness, syllable
-   count, energy distribution across the band the INMP441 actually resolves well, rarity in
-   ordinary speech, and a crisp onset for latency timestamping. Then choose, and record the
-   reasoning as a new decision. The old keyword carries no weight.
+1. ~~**Keyword selection.**~~ **DONE** — `KEYWORD_SELECTION.md` delivers 18 candidates, a
+   weighted 20-criterion matrix, phonetic analysis, hard-negative derivation, an ISRO/SIH
+   contextual analysis, an ESP32/WakeNet suitability analysis and a licence audit.
+   **Recommendation: `Takshila`**, pending confirmation (D-011 proposed).
+   Full data specification is in `KEYWORD_SELECTION.md` §§13–15.
 2. **Dataset design specification**, written *before* any recording: target speaker count,
    utterances per speaker, environments, distances, positional-offset strategy, hard-negative
    word list, background sources, split policy (speaker-disjoint), and the licence position
