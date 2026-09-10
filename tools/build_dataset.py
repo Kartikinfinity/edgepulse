@@ -80,7 +80,7 @@ def main() -> int:
 
     rows: list = []
 
-    log("[1/5] real INMP441 keyword recordings (validation/test only)")
+    log("[1/5] real INMP441 keyword recordings (train + held-out test session)")
     real_kept, real_rej = B.gen_real_positives(rows, noise_pool, log)
     log(f"      {real_kept} usable recordings, {real_rej} rejected on duration/QC")
     log("")
@@ -113,10 +113,10 @@ def main() -> int:
     log("")
 
     log("checking leakage ...")
-    fails, stats = leakage.check(manifest)
+    fails, warns, stats = leakage.check(manifest)
 
     elapsed = time.time() - t0
-    rep = report.build_report(manifest, stats, fails, elapsed)
+    rep = report.build_report(manifest, stats, fails, elapsed, warns)
     print(rep)
 
     (out / "DATASET_REPORT.txt").write_text(rep + "\n", encoding="utf-8")
@@ -131,6 +131,8 @@ def main() -> int:
         "speech_commands_present": SPEECH_COMMANDS.is_dir(),
         "clips": len(manifest),
         "leakage_pass": not fails,
+        "provisional": bool(warns),
+        "warnings": warns,
         "build_seconds": round(elapsed, 1),
     }, indent=2) + "\n", encoding="utf-8")
 

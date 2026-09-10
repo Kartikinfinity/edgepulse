@@ -35,6 +35,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dataset", type=Path, default=DATASET_ROOT)
+    ap.add_argument("--out", type=Path, default=OUT,
+                    help="model directory; use a fresh one to keep an "
+                         "earlier model intact for comparison")
+    ap.add_argument("--label", default="",
+                    help="short name recorded in training_record.json")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch", type=int, default=128)
     ap.add_argument("--lr", type=float, default=2e-3)
@@ -45,6 +50,7 @@ def main() -> int:
                          "fewer false accepts")
     ap.add_argument("--seed", type=int, default=20260910)
     args = ap.parse_args()
+    out_dir: Path = args.out
 
     import tensorflow as tf
     tf.keras.utils.set_random_seed(args.seed)
@@ -96,7 +102,7 @@ def main() -> int:
         metrics=["accuracy"],
     )
 
-    OUT.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     cbs = [
         tf.keras.callbacks.EarlyStopping(monitor="val_accuracy", patience=6,
                                          restore_best_weights=True, verbose=1),
@@ -117,11 +123,13 @@ def main() -> int:
     model.predict(Xva[:n], batch_size=1, verbose=0)
     host_ms = (time.time() - t0) / n * 1000
 
-    model.save(OUT / "kws_float.keras")
-    np.savez(OUT / "normalisation.npz", mean=mean, std=std)
+    model.save(out_dir / "kws_float.keras")
+    np.savez(out_dir / "normalisation.npz", mean=mean, std=std)
 
     record = {
         "keyword": "Takshila",
+        "label": args.label,
+        "dataset": str(args.dataset),
         "trained_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "seed": args.seed,
         "epochs_requested": args.epochs,
@@ -140,7 +148,7 @@ def main() -> int:
         "host_ms_per_inference": round(host_ms, 2),
         "history": {k: [float(x) for x in v] for k, v in hist.history.items()},
     }
-    (OUT / "training_record.json").write_text(json.dumps(record, indent=2) + "\n",
+    (out_dir / "training_record.json").write_text(json.dumps(record, indent=2) + "\n",
                                               encoding="utf-8")
 
     print()
@@ -150,7 +158,7 @@ def main() -> int:
     print(f"train time            {train_s/60:.1f} min")
     print(f"host inference        {host_ms:.2f} ms/clip (batch=1)")
     print(f"params / MACs         {info['params']:,} / {info['macs_per_inference']:,}")
-    print(f"saved                 {OUT/'kws_float.keras'}")
+    print(f"saved                 {out_dir/'kws_float.keras'}")
     print("=" * 74)
     print("\nNOTE: accuracy here is a CLIP metric on a TTS-dominated validation")
     print("set. It is a training signal, not a result. The numbers that matter")

@@ -2,6 +2,14 @@
 
 Leakage is not a warning. A dataset that leaks produces a number that means
 nothing, and the number will look good, which is worse than looking bad.
+
+SUFFICIENCY is a separate question and returns WARNINGS, not failures. "This
+test set is too small to conclude much" and "this test set is contaminated" are
+different problems: the first makes a number imprecise, the second makes it a
+lie. Bundling them meant a small-but-clean dataset could not be built at all,
+which blocked measuring whether real audio helps at the very point that
+question mattered. A dataset carrying warnings is marked PROVISIONAL and every
+number from it must be reported as such.
 """
 
 from __future__ import annotations
@@ -15,15 +23,17 @@ CHECKS = [
     "voice_id appearing in more than one split",
     "speaker_id appearing in more than one split",
     "source utterance (voice+text) spanning splits",
+    "held-out recording session appearing outside the test split",
     "synthetic audio present in the test split",
     "augmented audio present in the test split",
     "test split empty or missing a required class",
 ]
 
 
-def check(manifest: list[dict]) -> tuple[list[str], dict]:
-    """Return (failures, stats). Empty failures == clean."""
+def check(manifest: list[dict]) -> tuple[list[str], list[str], dict]:
+    """Return (failures, warnings, stats). Empty failures == no leakage."""
     fails: list[str] = []
+    warns: list[str] = []
     stats: dict = {}
 
     by_split = defaultdict(list)
@@ -60,8 +70,15 @@ def check(manifest: list[dict]) -> tuple[list[str], dict]:
             voice_splits[m["voice_id"]].add(m["split"])
     bad_voices = {v: s for v, s in voice_splits.items() if len(s) > 1}
     # The single real human speaker is a DECLARED exception: with one speaker a
-    # speaker-disjoint split is impossible, so they appear in validation AND
-    # test. They must never appear in train.
+    # speaker-disjoint split is impossible, so they span splits by construction.
+    #
+    # D-015 changed what that exception costs. Real audio is now allowed in
+    # TRAIN - keeping it out produced an honest evaluation that said the model
+    # does not work, and no feature transform closes the domain gap
+    # (DOMAIN_GAP_ANALYSIS.md 1). The control that replaces it is SESSION
+    # disjointness, checked below: whichever recording session is quarantined
+    # for test must appear in no other split. That is a real control, and unlike
+    # the old rule it is achievable with one speaker.
     declared = {v for v in bad_voices if v.startswith("SPK_PILOT")}
     undeclared = {v: s for v, s in bad_voices.items() if v not in declared}
     stats["voices_crossing_splits"] = len(undeclared)
@@ -69,10 +86,27 @@ def check(manifest: list[dict]) -> tuple[list[str], dict]:
     if undeclared:
         fails.append(f"{len(undeclared)} voice_id(s) span multiple splits, "
                      f"e.g. {list(undeclared.items())[:3]}")
-    for v in declared:
-        if "train" in voice_splits[v]:
-            fails.append(f"real speaker {v} appears in TRAIN — real audio is "
-                         "reserved for validation/test")
+
+    # --- 3b. recording SESSION disjointness -------------------------------
+    sess_splits = defaultdict(set)
+    for m in manifest:
+        sid = m.get("session_id") or ""
+        if sid:
+            sess_splits[sid].add(m["split"])
+    test_sessions = {k for k, v in sess_splits.items() if "test" in v}
+    leaked = {k: sorted(v) for k, v in sess_splits.items()
+              if "test" in v and len(v) > 1}
+    stats["real_sessions"] = {k: sorted(v) for k, v in sorted(sess_splits.items())}
+    stats["heldout_test_sessions"] = sorted(test_sessions)
+    stats["sessions_leaking_out_of_test"] = len(leaked)
+    if leaked:
+        fails.append(f"held-out session(s) appear outside test: {leaked} — the "
+                     "session-disjoint control is broken, so no real-audio "
+                     "number from this build means anything")
+    if sess_splits and not test_sessions:
+        fails.append("no recording session is quarantined for test — real "
+                     "positives in test must come from a session absent from "
+                     "train and validation")
 
     # --- 4. speaker_id across splits --------------------------------------
     spk_splits = defaultdict(set)
@@ -128,7 +162,23 @@ def check(manifest: list[dict]) -> tuple[list[str], dict]:
             fails.append("test split contains NO positives")
         n_pos = sum(1 for m in test if m["class"] == "positive")
         stats["test_positives"] = n_pos
+        # Sufficiency, not contamination. A 95% Wilson interval on a recall
+        # measured over n positives is roughly +-35 pp at n=18 and +-10 pp at
+        # n=200, so this governs how loudly a result may be stated, not whether
+        # the dataset is sound.
         if n_pos < 20:
-            fails.append(f"only {n_pos} test positives — too few to measure anything")
+            warns.append(f"only {n_pos} test positives — a recall measured here "
+                         f"carries roughly +-35 pp of uncertainty; treat every "
+                         f"number as PROVISIONAL and directional only")
+        elif n_pos < 100:
+            warns.append(f"{n_pos} test positives — usable but imprecise "
+                         f"(roughly +-15 pp on recall)")
 
-    return fails, stats
+    n_sessions = len(stats.get("heldout_test_sessions", []))
+    if n_sessions == 1 and stats.get("test_positives", 0) < 20:
+        warns.append("the held-out test set is ONE short session: it measures "
+                     "one speaker on one day, and cannot separate session "
+                     "effects from domain adaptation")
+
+    stats["provisional"] = bool(warns)
+    return fails, warns, stats

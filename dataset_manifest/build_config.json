@@ -1,5 +1,5 @@
 {
-  "dataset_version": "takshila-demo-1.0",
+  "dataset_version": "takshila-demo-2.0",
   "keyword": "Takshila",
   "master_seed": 20260910,
   "smoke": false,
@@ -26,7 +26,12 @@
   ],
   "distinct_tts_voices": 1069,
   "speech_commands_present": true,
-  "clips": 20926,
+  "clips": 21122,
   "leakage_pass": true,
-  "build_seconds": 708.0
+  "provisional": true,
+  "warnings": [
+    "only 18 test positives \u2014 a recall measured here carries roughly +-35 pp of uncertainty; treat every number as PROVISIONAL and directional only",
+    "the held-out test set is ONE short session: it measures one speaker on one day, and cannot separate session effects from domain adaptation"
+  ],
+  "build_seconds": 569.8
 }

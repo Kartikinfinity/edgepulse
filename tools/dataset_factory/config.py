@@ -19,7 +19,7 @@ from config.paths import DATASET_ROOT, PROJECT_ROOT, RECORDINGS_ROOT  # noqa: E4
 # Reproducibility
 # ---------------------------------------------------------------------------
 MASTER_SEED = 20260910
-DATASET_VERSION = "takshila-demo-1.0"
+DATASET_VERSION = "takshila-demo-2.0"
 KEYWORD = "Takshila"
 
 # ---------------------------------------------------------------------------
@@ -188,4 +188,37 @@ TARGETS = dict(
 #   never appears in val or test.
 # ---------------------------------------------------------------------------
 SPLIT_FRACTIONS = dict(train=0.80, validation=0.12, test=0.08)
-REAL_AUDIO_SPLITS = ("validation", "test")   # real human audio is for evaluation
+# ---------------------------------------------------------------------------
+# Real-device audio policy (D-015)
+# ---------------------------------------------------------------------------
+# D-014 sent every real recording to validation/test and kept training purely
+# synthetic. That produced an honest evaluation which said the model does not
+# work: real test recall 0/54, streaming 0/18. DOMAIN_GAP_ANALYSIS.md then
+# measured the two domains as 99.6% linearly separable and showed that neither
+# CMN nor a different log floor closes it. Preprocessing cannot fix this, so
+# real audio now enters TRAINING and the model is speaker-dependent by decision.
+#
+# One WHOLE session is quarantined for test, which finally makes the real
+# positive split session-disjoint - a control that was impossible while only one
+# session had enough usable takes.
+# All real recordings are ONE person (DEMO_DATASET_SPEC.md: a single available
+# human speaker). They landed under two different directory names - PILOT/ and
+# SPK_PILOT_01/ - and deriving speaker_id from the directory therefore invented
+# a second speaker, which the leakage gate correctly reported as a speaker
+# spanning splits. The speaker is a project fact, not a directory name.
+REAL_SPEAKER_ID = "SPK_PILOT_01"
+
+REAL_HELDOUT_SESSION = ""      # "" = auto-pick; or a session directory name
+REAL_VALIDATION_FRACTION = 0.25  # of the non-held-out takes, for threshold choice
+REAL_POSITIVE_REPEATS = 6      # window placements per real utterance
+# Real utterances are a few dozen against ~3,100 synthetic ones. Without
+# oversampling they contribute under 1% of the gradient and cannot move the
+# decision surface they exist to anchor.
+REAL_TRAIN_OVERSAMPLE = 4
+
+# Pad real positives with the recording's OWN room tone rather than digital
+# silence. Zeros put 20.7% of mel bins on the log floor (DOMAIN_GAP_ANALYSIS.md
+# 3) and no device ever hears digital silence.
+REAL_ROOM_TONE_PAD = True
+
+REAL_AUDIO_SPLITS = ("validation", "test")   # legacy; superseded by the policy above

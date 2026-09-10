@@ -44,14 +44,15 @@ SMOOTH_M, SMOOTH_N = 2, 3      # fire on 2 of the last 3 inferences
 REFRACTORY_MS = 1000           # one utterance = at most one detection
 
 
-def stream_scores(model, pcm: np.ndarray, mean, std) -> tuple[np.ndarray, np.ndarray]:
+def stream_scores(model, pcm: np.ndarray, mean, std,
+                  level_normalise: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """Slide the real streaming front end over `pcm`.
 
     Returns (times_ms, scores): the wall-clock time of each inference, measured
     at the END of its 985 ms context - which is the instant the device would
     have the information - and P(keyword) at that instant.
     """
-    fe = F.StreamingFrontEnd()
+    fe = F.StreamingFrontEnd(level_normalise=level_normalise)
     windows, times = [], []
     n_frames = 0
     chunk = F.FRAME_HOP
@@ -126,7 +127,7 @@ def main() -> int:
 
     import tensorflow as tf
     model = tf.keras.models.load_model(args.model)
-    norm = np.load(OUT / "normalisation.npz")
+    norm = np.load(args.model.parent / "normalisation.npz")
     mean, std = norm["mean"], norm["std"]
 
     clip_eval = json.loads((OUT / "evaluation_clip.json").read_text(encoding="utf-8"))

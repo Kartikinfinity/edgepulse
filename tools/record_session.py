@@ -202,7 +202,7 @@ def record(ser: serial.Serial, duration_ms: int) -> tuple[bytearray, dict]:
 LEVEL_TARGET_DB = -30.0
 
 
-def speech_check(pcm: bytes) -> dict:
+def speech_check(pcm: bytes, content: str = "keyword") -> dict:
     """Would the DATASET FACTORY accept this take?
 
     Transport integrity ("80000/80000 samples, 0 lost") says nothing about
@@ -218,6 +218,14 @@ def speech_check(pcm: bytes) -> dict:
     So this asks the factory itself, using the factory's own span rule and
     bounds. There is one definition of usable, and the microphone stand-in for
     it lives here.
+
+    `content` says what the take is supposed to hold:
+      keyword  the factory's full rule - span inside the keyword bounds and a
+               segment that fits the 1 s window
+      speech   speech present, but NOT the keyword (real negatives: near-
+               homophones, partials, ordinary sentences). The keyword-span rule
+               must not judge these - "shiksha" is not meant to pass it.
+      ambient  no speech expected; only transport integrity matters
 
     Returns a dict; `usable` is the verdict, `reason` is what to change.
     """
@@ -261,6 +269,27 @@ def speech_check(pcm: bytes) -> dict:
     over = np.flatnonzero(edb > thr)
     if over.size:
         out["truncated"] = bool((edb.size - 1 - over[-1]) * 0.010 < 0.10)
+
+    if content == "ambient":
+        out["usable"] = True
+        out["reason"] = "ambient take - no speech expected"
+        return out
+
+    if content == "speech":
+        # Real negative speech. Require a voice and enough level to be worth
+        # keeping; do NOT apply the keyword-span rule, which these are supposed
+        # to fail.
+        if out["snr_db"] < 6.0:
+            out.update(usable=False, reason="NO SPEECH - room tone only")
+        elif out["span_ms"] < 150.0:
+            out.update(usable=False, reason="barely any speech - say it fully")
+        elif peak < LEVEL_TARGET_DB:
+            out.update(usable=False,
+                       reason=f"TOO QUIET ({peak:.0f} dB, want > {LEVEL_TARGET_DB:.0f}) "
+                              f"- move closer to the mic")
+        else:
+            out.update(usable=True, reason="usable")
+        return out
 
     # THE VERDICT IS THE FACTORY'S, NOT A SECOND OPINION.
     # Ask the real acceptance rule: a span inside the keyword duration bounds,
@@ -328,6 +357,10 @@ def main() -> int:
     ap.add_argument("--notes", default="")
     ap.add_argument("--no-prompt", action="store_true",
                     help="skip the 3-2-1 countdown (for ambient/unattended capture)")
+    ap.add_argument("--content", choices=("keyword", "speech", "ambient"),
+                    default="keyword",
+                    help="what the take should hold: the keyword (factory rule), "
+                         "speech that is NOT the keyword, or ambient")
     ap.add_argument("--expect-speech", action="store_true", default=None,
                     help="fail a take that contains no speech (default: on unless "
                          "the label looks like silence/ambient)")
@@ -418,13 +451,14 @@ def main() -> int:
 
         got, exp = stats.get("samples", 0), expected
         drift = 100.0 * (got - exp) / exp if exp else 0.0
-        chk = speech_check(bytes(pcm))
+        chk = speech_check(bytes(pcm), args.content)
         meta["capture_stats"].update({
             "speech_band_dbfs": None if chk["band_dbfs"] != chk["band_dbfs"] else round(chk["band_dbfs"], 1),
             "speech_band_peak_db": None if chk["band_peak_db"] != chk["band_peak_db"] else round(chk["band_peak_db"], 1),
             "speech_band_snr_db": None if chk["snr_db"] != chk["snr_db"] else round(chk["snr_db"], 1),
             "keyword_span_ms": None if chk["span_ms"] != chk["span_ms"] else round(chk["span_ms"]),
             "truncated": chk["truncated"],
+            "content_kind": args.content,
             "factory_usable": chk["usable"],
             "verdict": chk["reason"],
         })

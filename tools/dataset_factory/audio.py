@@ -263,6 +263,48 @@ def place_in_window(word: np.ndarray, rng: np.random.Generator,
     return out, off, off + word.size
 
 
+def room_tone(x: np.ndarray, bounds: tuple[int, int] | None,
+              n: int, rng: np.random.Generator) -> np.ndarray:
+    """n samples of a recording's OWN non-speech audio, tiled if short.
+
+    Real positives used to be placed into a window of zeros. Digital silence is
+    not a thing any microphone produces: it pins mel bins to the log floor
+    (20.7% of them, against 8.3% for synthetic audio - DOMAIN_GAP_ANALYSIS.md 3)
+    and hands the model a constant where a spectrum should be. Padding with the
+    room tone the keyword was actually spoken into keeps the window in the
+    domain the device will see.
+    """
+    if bounds is None:
+        pool = x
+    else:
+        pool = np.concatenate([x[:bounds[0]], x[bounds[1]:]])
+    if pool.size < 400:
+        return np.zeros(n, dtype=np.float32)
+    if pool.size < n:
+        pool = np.tile(pool, int(np.ceil(n / pool.size)))
+    start = int(rng.integers(0, pool.size - n + 1))
+    return pool[start:start + n].astype(np.float32)
+
+
+def place_in_ambience(word: np.ndarray, ambience: np.ndarray,
+                      rng: np.random.Generator,
+                      margin_samples: int) -> tuple[np.ndarray, int, int]:
+    """place_in_window, but the window starts as room tone instead of zeros."""
+    out = ambience[:CLIP_SAMPLES].astype(np.float32).copy()
+    if out.size < CLIP_SAMPLES:
+        out = np.pad(out, (0, CLIP_SAMPLES - out.size))
+    if word.size >= CLIP_SAMPLES:
+        start = int(rng.integers(0, word.size - CLIP_SAMPLES + 1))
+        return word[start:start + CLIP_SAMPLES].astype(np.float32), -1, -1
+    lo = margin_samples
+    hi = CLIP_SAMPLES - word.size - margin_samples
+    off = int(rng.integers(lo, hi + 1)) if hi > lo else max(0, (CLIP_SAMPLES - word.size) // 2)
+    # Overlay, not replace: the word was recorded in this room tone, so the
+    # tone continues underneath it rather than being punched out.
+    out[off:off + word.size] += word
+    return out, off, off + word.size
+
+
 def cut_partial(word: np.ndarray, rng: np.random.Generator,
                 cov_lo: float, cov_hi: float) -> tuple[np.ndarray, float]:
     """Produce a window holding only part of the keyword — the sliding-window

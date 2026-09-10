@@ -773,3 +773,95 @@ Pipeline **works end to end**: dataset -> features -> training -> evaluation ->
 streaming -> int8 export -> golden reference. The model **fails its purpose**.
 The blocking issue is real positive audio in training, and it is now measured
 rather than predicted.
+
+---
+
+## EXP-007 — Real-device domain adaptation: diagnosis, model-2, and a level mismatch
+
+**Date:** 2026-09-10 · **Decisions:** D-015, D-016 · **Reports:** `DOMAIN_GAP_ANALYSIS.md`, `MODEL_COMPARISON.md`
+
+### Pre-declared pass bar
+
+> model-2 shows a **meaningful improvement in real INMP441 streaming detection**
+> over model-1 on the same held-out real test set, **without an unacceptable rise
+> in false alarms**. Threshold chosen on validation only.
+
+### What was done
+
+1. **Diagnosis before data collection.** Fitted a linear classifier to separate
+   real from synthetic positives on the features the model consumes.
+2. **Dataset v3** (`takshila-demo-2.0`): real audio into train, one session
+   quarantined for test, real positives padded with their own room tone.
+3. **model-2**: identical architecture, retrained on v3.
+4. **Comparison** of both models on the same held-out session.
+
+### Results
+
+| | model-1 | model-2 |
+|---|---:|---:|
+| real clip recall (n=18) | 0.0 % | 100.0 % |
+| streaming, raw audio | 0/15 | 0/15 |
+| streaming, + level normalisation | 0/15 | **14/15** |
+| near-homophone rejected | 97.3 % | 96.3 % |
+| FA/hour (synthetic negative stream) | 4.0 | 20.0 |
+
+**Pass bar: met on detection, not yet demonstrated on false alarms.** Real
+streaming detection went 0 → 93 %. The false-alarm side is *not* established:
+20/hour on a synthetic stream is a fivefold rise, and the real-device figure
+cannot be computed at all because no real non-keyword recording exists.
+
+### The four measured findings
+
+1. **No preprocessing closes the domain gap.** Real and synthetic positives are
+   **99.6 %** linearly separable; CMN moves that only to 96.9 %, and log-floor
+   changes do nothing. This is what justified asking for recordings.
+2. **The gap is small in feature space but the model had no margin.** Mean
+   \|Cohen's d\| on speech frames is **0.38**, a 0.48 SD displacement — yet output
+   collapsed 0.94 → 0.10.
+3. **Digital silence was hurting the features.** Real positives padded with zeros
+   put **20.7 %** of mel bins on the log floor (synthetic: 8.3 %). Padding with the
+   recording's own room tone took it to **0.00 %**.
+4. **A 16 dB train/deploy level mismatch was masking everything.** Training clips
+   −2.3 dBFS peak, deployment windows −18.7. The same window scored 0.304 raw and
+   1.000 normalised. Both real training data *and* level normalisation were
+   necessary; neither alone moved streaming off 0/15.
+
+### What this does NOT prove
+
+* **The test set is 3 utterances / 18 clips — roughly ±35 pp on recall.** The
+  build marks v3 **PROVISIONAL**. "100 % real clip recall" means "no failures in
+  18 clips".
+* One session, one speaker, one room, one day. Session effects cannot be
+  separated from domain adaptation.
+* The model is **speaker-dependent** (D-015) and is not claimed otherwise.
+* **The real-device false-alarm rate is unmeasured.** On 0.4 min of verified
+  speech-free device audio, normalised model-2 gave **1 false accept**, raw gave 0.
+* int8 quantisation **failed** the max-deviation criterion (0.0788 vs bar 0.05),
+  though correlation (0.9993), decision flips (0.298 %) and streaming detection
+  (13/15 float and int8 alike) all pass. Reported as a failure, not relaxed.
+
+### Errors made and corrected during this experiment
+
+* Claimed positives got noise augmentation and negatives did not. **False** —
+  the count used a broken expression (`chr(39) in ""`). Augmentation is symmetric
+  across classes; the real asymmetry is that the whole *test split* is clean.
+* Reported CMN reducing the domain gap to exactly 0.000. **Artefact** — CMN zeroes
+  each clip's per-coefficient mean by construction, so a mean-based distance
+  measures nothing. Replaced with a separability probe.
+* Concluded added noise does not help real audio, using pink noise made by
+  `cumsum`. **Wrong** — that energy sits below the 125 Hz mel floor and never
+  reaches the features. Broadband noise raises the median score 0.074 → 0.641.
+* Measured real-device false accepts at 1293/hour. **Withdrawn** — the negative
+  stream was built by excising the keyword with the speech-span detector, which
+  on the 37 too-quiet takes found only a ~140 ms fragment and left most of a real
+  keyword behind. It was counting true positives as false accepts.
+* Measured FA/hour with times in seconds where `detections()` expects
+  milliseconds, silently disabling the refractory hold and under-counting.
+
+### Recording yield, and why the next session should be different
+
+Across all 66 takes recorded so far: **18 usable (27 %)**. The dominant failure is
+a single fault — **37 takes (56 %) were too quiet** — which the corrected recorder
+now catches at capture time and names. `tools/record_protocol.py` walks the
+diverse conditions the domain analysis argues for rather than asking for
+repetitions of one.

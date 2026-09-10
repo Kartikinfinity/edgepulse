@@ -1,12 +1,24 @@
 # STATUS.md
 
-**Last updated:** 2026-09-10 · **Phase:** **BASELINE MEASURED — model fails on real audio**
+**Last updated:** 2026-09-10 · **Phase:** **model-2 DETECTS REAL AUDIO — on a provisional test set**
 
-> **A baseline DS-CNN has been trained, evaluated, quantised and measured end to end.**
-> The pipeline works. **The model does not** — it detects **0 of 18** real recordings of the
-> keyword and scores real audio at median **0.10** against **0.94** for synthetic TTS.
-> Full numbers: **`BASELINE_RESULTS.md`** · experiment record: `BUILD_LOG.md` EXP-006.
-> **Next:** record 60-100 real takes and retrain with real audio in TRAIN (**D-015**).
+> **model-2 detects 14 of 15 held-out real recordings** (model-1: 0 of 15), with the
+> architecture unchanged. Two changes were needed and neither was sufficient alone:
+> **real INMP441 audio in training** (D-015) and **per-window level normalisation at
+> inference** (D-016) — the factory normalises positives to −6 dBFS while streaming fed
+> raw audio 16 dB quieter.
+> Full numbers: **`MODEL_COMPARISON.md`** · diagnosis: **`DOMAIN_GAP_ANALYSIS.md`** ·
+> experiment record: `BUILD_LOG.md` EXP-007.
+>
+> **Read the result with its caveat.** The held-out test is **3 utterances / 18 clips**
+> (≈ **±35 pp** on recall) and `data/dataset_v3` is marked **PROVISIONAL** by the build.
+> The model is **speaker-dependent** by decision.
+>
+> **The blocking gap is false alarms.** No recording of real *non-keyword* speech on this
+> microphone exists, so the demo's false-alarm behaviour **cannot currently be measured**.
+> On 0.4 min of verified speech-free device audio, normalised model-2 gave 1 false accept.
+> **Next:** run `python tools/record_protocol.py --session S_ADAPT_02` (positives +
+> **real negatives**), then a second `--heldout` session, and re-run the comparison.
 
 **The repository is now machine-independent** (`DECISIONS.md` D-009). It can be cloned into
 any directory on Windows or Linux; all paths resolve through `config/paths.py`. Start a new

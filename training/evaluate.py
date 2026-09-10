@@ -133,7 +133,12 @@ def main() -> int:
 
     import tensorflow as tf
     model = tf.keras.models.load_model(args.model)
-    norm = np.load(OUT / "normalisation.npz")
+    # Normalisation belongs to the MODEL, not to a fixed directory. Loading
+    # it from OUT scored whichever model was passed with whatever statistics
+    # happened to be in artifacts/model - silently wrong the moment a second
+    # model exists, which is exactly what the model-1 vs model-2 comparison
+    # needs.
+    norm = np.load(args.model.parent / "normalisation.npz")
     m4, s4 = norm["mean"][:, None], norm["std"][:, None]
 
     print("=" * 78)

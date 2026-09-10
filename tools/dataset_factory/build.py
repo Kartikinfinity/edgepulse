@@ -25,13 +25,17 @@ from pathlib import Path
 import numpy as np
 
 from . import tts
-from .audio import (apply_gain_db, apply_rir, change_speed, cut_partial,
+from .audio import (place_in_ambience, room_tone,
+                    apply_gain_db, apply_rir, change_speed, cut_partial,
                     measure_snr_db, mic_band_limit, mix_noise, peak_normalize,
                     extract_keyword, place_in_window, random_crop, read_wav,
-                    rms_dbfs, rng_for,
+                    rms_dbfs, rng_for, speech_span_bounds,
                     seed_of, sha256_array, speech_span_ms, trim_silence,
                     write_wav, triangular)
 from .config import (AUG, CLIP_SAMPLES, DATASET_VERSION, EDGE_MARGIN_MS,
+                     REAL_HELDOUT_SESSION, REAL_POSITIVE_REPEATS, REAL_SPEAKER_ID,
+                     REAL_ROOM_TONE_PAD, REAL_TRAIN_OVERSAMPLE,
+                     REAL_VALIDATION_FRACTION,
                      MAX_KEYWORD_MS, MIN_KEYWORD_MS, MODEL_TARGET,
                      NEAR_HOMOPHONES, OUT_DIR, PARTIAL_COVERAGE, PILOT_DIR,
                      REAL_AUDIO_SPLITS, SPEECH_COMMANDS, SPLIT_FRACTIONS, SR,
@@ -46,7 +50,7 @@ MANIFEST_FIELDS = [
     "sample_rate", "duration_samples", "keyword_onset_ms", "keyword_offset_ms",
     "keyword_coverage", "speaking_rate", "length_scale",
     "augmentation", "snr_db", "gain_db", "rms_dbfs", "measured_snr_db",
-    "split", "generation_seed", "sha256",
+    "session_id", "split", "generation_seed", "sha256",
 ]
 
 
@@ -375,33 +379,23 @@ def gen_background_silence(rows: list, noise_pool: dict, log) -> tuple[int, int]
     return nb, ns
 
 
-def gen_real_positives(rows: list, noise_pool: dict, log) -> tuple[int, int]:
-    """Real human INMP441 keyword recordings.
-
-    ONE speaker, so these go to validation/test ONLY. They are what makes the
-    evaluation real; putting them in train would leave nothing honest to test on
-    and would still not buy speaker independence.
-    """
+def _usable_real_takes() -> tuple[list[dict], int]:
+    """Every real recording that passes the factory's acceptance rule, with the
+    source audio and speech bounds kept so the window can be padded with the
+    recording's own room tone."""
     files = sorted(PILOT_DIR.rglob("*takshila*.wav"))
-    if not files:
-        log("  no real keyword recordings found")
-        return 0, 0
-    kept = rejected = 0
-    usable_per_session: dict[str, int] = {}
+    takes: list[dict] = []
+    rejected = 0
     for f in files:
         try:
             x, sr = read_wav(f)
         except Exception:
             rejected += 1
             continue
-        # LOCATE the keyword inside the 3 s recording and cut it out. Trimming
-        # alone is not enough: room tone keeps the array far longer than 1 s, and
-        # place_in_window would then random-crop it, potentially producing a
-        # "positive" containing no keyword at all.
-        # Measure the span on the ORIGINAL recording, where real silence exists
-        # to establish a noise floor. Measuring it on the already-extracted
-        # segment re-thresholds against speech itself and collapses the span -
-        # it dropped 15/17 usable takes to 5/17 before this was corrected.
+        # LOCATE the keyword inside the recording and cut it out. Measure the
+        # span on the ORIGINAL, where real silence exists to set a noise floor;
+        # measuring it on the extracted segment re-thresholds against speech
+        # itself and collapsed 15/17 usable takes to 5/17 before this was fixed.
         span = speech_span_ms(x, SR)
         if not (MIN_KEYWORD_MS <= span <= MAX_KEYWORD_MS):
             rejected += 1
@@ -415,63 +409,159 @@ def gen_real_positives(rows: list, noise_pool: dict, log) -> tuple[int, int]:
             if w is None or w.size > CLIP_SAMPLES - 2 * MARGIN:
                 rejected += 1
                 continue
-        # Split real audio between validation and test.
-        #
-        # SESSION-disjoint would be the right control (docs/DATASET_RESEARCH.md 9)
-        # and the code below prefers it, but it only applies when every session
-        # yields enough usable takes. Right now session S_PILOT_02 contributes 1
-        # usable take of 30 - the rest captured room tone - so a session-disjoint
-        # test set would hold a single utterance. We therefore alternate WITHIN
-        # sessions and record session_id so the report can state plainly that
-        # session overfitting is NOT controlled for.
-        session = f.parent.name
-        usable_per_session[session] = usable_per_session.get(session, 0) + 1
-        split = REAL_AUDIO_SPLITS[kept % len(REAL_AUDIO_SPLITS)]
-        for k in range(6):        # offset sampling: the real inference distribution
+        takes.append({
+            "file": f, "session": f.parent.name, "speaker": REAL_SPEAKER_ID,
+            "source_dir": f.parent.parent.name,
+            "x": x, "word": w, "bounds": speech_span_bounds(x, SR), "span_ms": span,
+        })
+    return takes, rejected
+
+
+def _choose_heldout(sessions: dict[str, int]) -> str:
+    """Pick the session to quarantine for test.
+
+    Prefers an explicit choice, then the largest session that still leaves the
+    majority of takes for training. A session-disjoint test set is the whole
+    point, so this returns "" only when a single session holds everything.
+    """
+    if REAL_HELDOUT_SESSION:
+        if REAL_HELDOUT_SESSION not in sessions:
+            raise SystemExit(f"REAL_HELDOUT_SESSION={REAL_HELDOUT_SESSION!r} has no "
+                             f"usable takes; sessions found: {sorted(sessions)}")
+        return REAL_HELDOUT_SESSION
+    if len(sessions) < 2:
+        return ""
+    total = sum(sessions.values())
+    ok = [k for k, v in sessions.items() if v <= total / 2]
+    if not ok:
+        ok = list(sessions)
+    return max(ok, key=lambda k: (sessions[k], k))
+
+
+def _assign_real_splits(takes: list[dict], heldout: str) -> None:
+    """train / validation / test for each real utterance, in place.
+
+    The held-out session is test and nothing else. The remainder divides
+    utterance-disjointly, with validation taking every Nth take so both splits
+    span the whole session rather than its first or last minutes.
+    """
+    for t in takes:
+        t["split"] = None
+    pool = [t for t in sorted(takes, key=lambda z: z["file"].name)
+            if not heldout or t["session"] != heldout]
+    n_val = max(1, int(round(len(pool) * REAL_VALIDATION_FRACTION))) if pool else 0
+    step = max(2, len(pool) // n_val) if n_val else 0
+    assigned = 0
+    for i, t in enumerate(pool):
+        if step and i % step == 0 and assigned < n_val:
+            t["split"] = "validation"
+            assigned += 1
+        else:
+            t["split"] = "train"
+    for i, t in enumerate(takes):
+        if heldout and t["session"] == heldout:
+            t["split"] = "test"
+        elif t["split"] is None:
+            t["split"] = REAL_AUDIO_SPLITS[i % len(REAL_AUDIO_SPLITS)]
+
+
+def gen_real_positives(rows: list, noise_pool: dict, log) -> tuple[int, int]:
+    """Real human INMP441 keyword recordings.
+
+    D-015: real audio now enters TRAINING. D-014 kept it out, which produced an
+    honest evaluation saying the model does not work (0/54 real test recall,
+    0/18 streaming). DOMAIN_GAP_ANALYSIS.md then measured the two domains as
+    99.6% linearly separable and showed no feature transform closes it, so the
+    decision surface has to be anchored in the real domain instead.
+
+    ONE whole session is quarantined for test. The resulting model is
+    SPEAKER-DEPENDENT and must be reported as such - real audio in training buys
+    domain adaptation, never speaker independence.
+    """
+    takes, rejected = _usable_real_takes()
+    if not takes:
+        log("  no real keyword recordings found")
+        return 0, rejected
+
+    per_session: dict[str, int] = {}
+    for t in takes:
+        per_session[t["session"]] = per_session.get(t["session"], 0) + 1
+    heldout = _choose_heldout(per_session)
+    _assign_real_splits(takes, heldout)
+
+    log("      usable takes per session: " +
+        ", ".join(f"{k}={v}" for k, v in sorted(per_session.items())))
+    if heldout:
+        log(f"      HELD-OUT session (test only): {heldout} "
+            f"({per_session[heldout]} utterances)")
+        log("      real positive split is SESSION-DISJOINT")
+    else:
+        log("      NOTE: only one session has usable takes, so none can be held")
+        log("            out. Falling back to an utterance-disjoint split;")
+        log("            session overfitting is NOT controlled for.")
+
+    counts = {"train": 0, "validation": 0, "test": 0}
+    for t in takes:
+        counts[t["split"]] += 1
+    log(f"      real utterances -> train {counts['train']}, "
+        f"validation {counts['validation']}, test {counts['test']}")
+
+    kept = 0
+    for t in takes:
+        split, f, w, x, b = t["split"], t["file"], t["word"], t["x"], t["bounds"]
+        # Oversample ONLY in train: a few dozen real utterances against ~3,100
+        # synthetic ones would otherwise contribute under 1% of the gradient and
+        # could not move the decision surface they exist to anchor.
+        reps = REAL_POSITIVE_REPEATS * (REAL_TRAIN_OVERSAMPLE if split == "train" else 1)
+        for k in range(reps):
             r = rng_for("realpos", f.stem, k)
-            clip, on, off = place_in_window(peak_normalize(w, -6.0), r, MARGIN)
+            word = peak_normalize(w, -6.0)
+            if REAL_ROOM_TONE_PAD:
+                amb = room_tone(x, b, CLIP_SAMPLES, r)
+                # Scale the ambience by the same factor peak_normalize applied to
+                # the word, so padding a boosted word with untouched room tone
+                # does not invent an SNR the microphone never produced.
+                gain = float(np.abs(word).max() / max(np.abs(w).max(), 1e-9))
+                clip, on, off = place_in_ambience(word, amb * gain, r, MARGIN)
+            else:
+                clip, on, off = place_in_window(word, r, MARGIN)
             clip, ameta = augment(clip, split, noise_pool, r)
             rows.append(_row(
                 cls="positive", sub="positive/real_inmp441", split=split,
-                source_type="real_device", speaker_id="SPK_PILOT_01",
-                voice_id="SPK_PILOT_01", synthetic="false", mic="inmp441",
+                source_type="real_device", speaker_id=t["speaker"],
+                voice_id=t["speaker"], synthetic="false", mic="inmp441",
                 corpus="own_inmp441", lic="project-owned", text="Takshila",
                 clip=clip, onset=on / SR * 1000, offset=off / SR * 1000, cov=1.0,
-                rate=f"session:{session}", ameta=ameta,
+                rate="", session=t["session"], ameta=ameta,
                 seed=seed_of("realpos", f.stem, k),
             ))
-        # partial-keyword windows from real audio - the most realistic negatives
+        # Partial-keyword windows from real audio - the most realistic negatives.
         for k in range(2):
             r = rng_for("realpart", f.stem, k)
             pc, cov = cut_partial(peak_normalize(w, -6.0), r, *PARTIAL_COVERAGE)
             pc, ameta = augment(pc, split, noise_pool, r)
             rows.append(_row(
                 cls="hard_negative", sub="hard_negative/partial_real", split=split,
-                source_type="real_device", speaker_id="SPK_PILOT_01",
-                voice_id="SPK_PILOT_01", synthetic="false", mic="inmp441",
+                source_type="real_device", speaker_id=t["speaker"],
+                voice_id=t["speaker"], synthetic="false", mic="inmp441",
                 corpus="own_inmp441", lic="project-owned", text="Takshila",
-                clip=pc, onset="", offset="", cov=round(cov, 3), rate="",
-                ameta=ameta, seed=seed_of("realpart", f.stem, k),
+                clip=pc, onset="", offset="", cov=round(cov, 3),
+                rate="", session=t["session"], ameta=ameta,
+                seed=seed_of("realpart", f.stem, k),
             ))
         kept += 1
-    if usable_per_session:
-        log("      usable takes per session: " +
-            ", ".join(f"{k}={v}" for k, v in sorted(usable_per_session.items())))
-        if len(usable_per_session) > 1 and min(usable_per_session.values()) < 5:
-            log("      NOTE: one session contributed too few usable takes for a")
-            log("            session-disjoint split; alternating within sessions.")
-            log("            Session overfitting is NOT controlled for.")
     return kept, rejected
 
 
 # ---------------------------------------------------------------------------
 def _row(*, cls, sub, split, source_type, speaker_id, voice_id, synthetic, mic,
-         corpus, lic, text, clip, onset, offset, cov, rate, ameta, seed) -> dict:
+         corpus, lic, text, clip, onset, offset, cov, rate, ameta, seed,
+         session='') -> dict:
     return dict(
         _clip=clip, cls=cls, sub=sub, split=split, source_type=source_type,
         speaker_id=speaker_id, voice_id=voice_id, synthetic=synthetic, mic=mic,
         corpus=corpus, lic=lic, text=text, onset=onset, offset=offset, cov=cov,
-        rate=rate, ameta=ameta, seed=seed,
+        rate=rate, ameta=ameta, seed=seed, session=session,
     )
 
 
@@ -509,6 +599,7 @@ def write_all(rows: list, out_dir: Path, log) -> list[dict]:
             "snr_db": am["snr_db"], "gain_db": am["gain_db"],
             "rms_dbfs": f"{rms_dbfs(x):.1f}",
             "measured_snr_db": f"{measure_snr_db(x):.1f}",
+            "session_id": r.get("session", ""),
             "split": split, "generation_seed": r["seed"],
             "sha256": sha256_array(x),
         })

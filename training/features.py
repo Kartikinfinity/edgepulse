@@ -45,6 +45,52 @@ LOG_FLOOR = 1e-10          # keeps log() finite on digital silence
 
 FEATURE_SHAPE = (N_FRAMES, N_MFCC)
 
+# ---------------------------------------------------------------------------
+# Window level normalisation — EXP-007
+# ---------------------------------------------------------------------------
+# The dataset factory peak-normalises every positive to -6 dBFS. The streaming
+# path did not, so the model met deployment audio 16 dB quieter than anything it
+# trained on (training clips -2.3 dBFS peak, raw recordings -18.7) and scored
+# 0.304 where the same window normalised scored 1.000. Detection over held-out
+# recordings went 0/15 -> 13/15 with this single change (EXP-007).
+#
+# Scaling a waveform by s multiplies every mel energy by s^2, which is a
+# CONSTANT offset of 2*ln(s) in log-mel, and an orthonormal DCT-II maps a
+# constant vector onto c0 alone. So a level change is exactly a c0 offset:
+#
+#     c0' = c0 + 2*sqrt(N_MEL)*ln(s)
+#
+# Verified numerically to 4 decimal places for gains in [-12, +6] dB. It breaks
+# only when the scaled signal clips or when mel bins hit LOG_FLOOR, which is why
+# the floor below exists and why real positives are padded with room tone.
+#
+# The consequence that matters for firmware: normalisation does NOT force the
+# frame ring to be recomputed per window. Frames stay incremental and only c0 is
+# adjusted at inference time.
+LEVEL_NORM_TARGET_DBFS = -6.0    # matches the factory's peak_normalize target
+LEVEL_NORM_FLOOR_DBFS = -45.0    # below this a window is room tone; never amplify it
+C0_PER_LOG_GAIN = 2.0 * np.sqrt(N_MEL)
+
+
+def level_gain(peak_abs: float) -> float:
+    """Gain putting a window's peak at the level the model trained on.
+
+    Returns 1.0 for a window quieter than the floor. Without that guard a silent
+    window gets amplified to full scale and becomes a false-accept generator.
+    """
+    if peak_abs <= 10.0 ** (LEVEL_NORM_FLOOR_DBFS / 20.0):
+        return 1.0
+    return 10.0 ** (LEVEL_NORM_TARGET_DBFS / 20.0) / max(peak_abs, 1e-12)
+
+
+def apply_level_gain(feats: np.ndarray, gain: float) -> np.ndarray:
+    """Apply a waveform gain to already-computed MFCC, as the c0 offset it is."""
+    if gain == 1.0:
+        return feats
+    out = np.array(feats, copy=True)
+    out[..., 0] += C0_PER_LOG_GAIN * np.log(gain)
+    return out
+
 
 # ---------------------------------------------------------------------------
 # Fixed tables — computed once, identical on host and device
@@ -149,22 +195,30 @@ class StreamingFrontEnd:
     the window (`ARCHITECTURE.md` 2, component 4).
     """
 
-    def __init__(self, n_frames: int = N_FRAMES):
+    def __init__(self, n_frames: int = N_FRAMES, level_normalise: bool = False):
         self.n_frames = n_frames
+        self.level_normalise = level_normalise
         self._buf = np.zeros(0, dtype=np.float64)
         self._ring = np.zeros((n_frames, N_MFCC), dtype=np.float64)
         self._filled = 0
+        # Raw samples spanning the current context, kept only to measure the
+        # window peak. The device already holds this for pre-roll capture.
+        self._raw = np.zeros(0, dtype=np.float64)
 
     def reset(self) -> None:
         self._buf = np.zeros(0, dtype=np.float64)
         self._ring[:] = 0.0
         self._filled = 0
+        self._raw = np.zeros(0, dtype=np.float64)
 
     def push(self, pcm_chunk: np.ndarray) -> list[np.ndarray]:
         """Feed a chunk; return the MFCC frames it completed."""
         a = np.asarray(pcm_chunk)
         x = pcm16_to_float(a) if np.issubdtype(a.dtype, np.integer) else a.astype(np.float64)
         self._buf = np.concatenate([self._buf, x])
+        if self.level_normalise:
+            span = (self.n_frames - 1) * FRAME_HOP + FRAME_LEN
+            self._raw = np.concatenate([self._raw, x])[-span:]
         made = []
         while self._buf.size >= FRAME_LEN:
             f = frame_to_mfcc(self._buf[:FRAME_LEN])
@@ -181,7 +235,9 @@ class StreamingFrontEnd:
 
     def window(self) -> np.ndarray:
         """The current N_FRAMES x N_MFCC context, oldest frame first."""
-        return self._ring.copy()
+        if not self.level_normalise or self._raw.size == 0:
+            return self._ring.copy()
+        return apply_level_gain(self._ring, level_gain(float(np.abs(self._raw).max())))
 
 
 def frames_streaming(pcm: np.ndarray, chunk: int = 320) -> np.ndarray:
@@ -243,4 +299,10 @@ def describe() -> dict:
         dct="orthonormal_dct2", log_floor=LOG_FLOOR,
         normalisation="per_coefficient_mean_std_train_only",
         feature_shape=list(FEATURE_SHAPE),
+        # Inference-path level normalisation (D-016). The MFCC computation above
+        # is unchanged by it, but the firmware must mirror these to reproduce a
+        # host score, so they belong in the recorded contract.
+        level_norm_target_dbfs=LEVEL_NORM_TARGET_DBFS,
+        level_norm_floor_dbfs=LEVEL_NORM_FLOOR_DBFS,
+        level_norm_applied_as="c0 += 2*sqrt(n_mel)*ln(gain)",
     )

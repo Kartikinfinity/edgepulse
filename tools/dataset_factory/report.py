@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 
 
 def build_report(manifest: list[dict], stats: dict, fails: list[str],
-                 elapsed_s: float) -> str:
+                 elapsed_s: float, warns: list[str] | None = None) -> str:
     L: list[str] = []
     A = L.append
     n = len(manifest)
@@ -120,6 +120,10 @@ def build_report(manifest: list[dict], stats: dict, fails: list[str],
             A(f"  {k:<34} {stats[k]}")
     if stats.get("declared_real_speaker_exception"):
         A(f"  declared exception (1 human speaker): {stats['declared_real_speaker_exception']}")
+    if stats.get("real_sessions"):
+        A("  recording sessions by split:")
+        for sid, sp in stats["real_sessions"].items():
+            A(f"    {sid:<20} {'+'.join(sp)}")
     A("")
     A("=" * 78)
     if fails:
@@ -128,5 +132,12 @@ def build_report(manifest: list[dict], stats: dict, fails: list[str],
             A(f"  - {f}")
     else:
         A("LEAKAGE: PASS — no leakage detected")
+    if warns:
+        A("")
+        A(f"SUFFICIENCY: {len(warns)} warning(s) — dataset is PROVISIONAL")
+        for w in warns:
+            A(f"  - {w}")
+        A("  These are not contamination. The dataset is sound; it is SMALL.")
+        A("  Every number measured on it must be reported as provisional.")
     A("=" * 78)
     return "\n".join(L)

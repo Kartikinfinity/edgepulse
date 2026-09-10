@@ -537,3 +537,69 @@ recorded so far. The dominant failure it now reports live - **TOO QUIET**,
 A measured demonstration that a TTS-trained positive class detects real speech
 on this microphone. EXP-006 is evidence against; anything claiming otherwise
 needs its own experiment, not an argument.
+
+---
+
+## D-016 — Inference normalises window level; sufficiency is separated from leakage
+
+**Date:** 2026-09-10 · **Status:** active
+**Evidence:** EXP-007, `MODEL_COMPARISON.md`, `DOMAIN_GAP_ANALYSIS.md`
+
+### Part 1 — the inference path normalises window level
+
+The dataset factory peak-normalises every positive to −6 dBFS. The streaming
+path fed raw audio, which on real recordings sits at −18.7 dBFS peak. The model
+therefore met deployment audio **16 dB below anything it trained on**. The same
+1 s window scored **0.304 raw and 1.000 normalised**; held-out streaming
+detection went **0/15 → 14/15**.
+
+**Decision.** Level normalisation is part of the inference contract, not an
+evaluation trick. `training/features.py` defines `LEVEL_NORM_TARGET_DBFS = -6.0`
+and `LEVEL_NORM_FLOOR_DBFS = -45.0`; the firmware front end must mirror both.
+
+**Why it is cheap.** A waveform gain *s* is exactly a c0 offset —
+`c0' = c0 + 2·√N_MEL·ln(s)` — because scaling multiplies mel energies by *s²*, a
+constant offset in log-mel, and an orthonormal DCT-II sends a constant vector to
+c0 alone. Verified to 4 decimals over [−12, +6] dB. **Frames stay incremental;
+only c0 changes at inference.** No per-window recomputation of the frame ring.
+
+**The known cost, stated up front.** A broadband level gate cannot tell speech
+from room tone on this microphone: keyword windows and room-tone windows differ
+by **1.2 dB peak / 0.3 dB RMS**, because sub-100 Hz rumble dominates level
+regardless of speech. So room tone is amplified as much as speech is. On 0.4 min
+of verified speech-free device audio this produced **1 false accept** against 0
+unnormalised. That is a flag, not a rate. **Real non-keyword device audio must be
+recorded before the demo's false-alarm behaviour can be claimed.**
+
+**Alternative considered and rejected for now.** Widening gain augmentation so
+the model becomes level-robust without an inference change. It keeps the firmware
+contract untouched, but leaves level as a free variable the model must spend
+capacity on, and was not measured. Revisit if the false-alarm cost proves real.
+
+### Part 2 — a small dataset is not a leaking dataset
+
+The leakage gate previously failed the build on "only N test positives — too few
+to measure anything". That conflates two different failures: **contamination**
+makes a number a lie, **insufficiency** makes it imprecise. Bundling them meant a
+clean-but-small dataset could not be built at all, which blocked measuring
+whether real audio helps at precisely the moment the question mattered.
+
+**Decision.** `leakage.check()` returns `(fails, warns, stats)`. Contamination
+fails the build, unconditionally, as before. Sufficiency emits warnings, sets
+`provisional: true` in `build_config.json`, and prints a SUFFICIENCY block in the
+report. **Every number measured on a provisional dataset must be reported as
+provisional** — `MODEL_COMPARISON.md` does this.
+
+### Part 3 — the session-disjointness control replaces the train-exclusion rule
+
+D-014's rule "real audio must never appear in train" was enforced in code. D-015
+reverses it, so the check would now fail every valid build. It is replaced by a
+control that is both achievable with one speaker and more useful: **whichever
+recording session is quarantined for test must appear in no other split**, and a
+build with real audio but no quarantined session fails. `S_PILOT_03` is currently
+held out, making the real positive split session-disjoint for the first time.
+
+Speaker identity is now a project fact (`REAL_SPEAKER_ID`), not a directory name.
+The same person had been recorded under `PILOT/` and `SPK_PILOT_01/`, which
+invented a second speaker and correctly tripped the speaker-disjointness check.
+

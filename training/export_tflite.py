@@ -81,11 +81,16 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dataset", type=Path, default=DATASET_ROOT)
     ap.add_argument("--model", type=Path, default=OUT / "kws_float.keras")
+    ap.add_argument("--out", type=Path, default=None,
+                    help="output directory (default: the model's own)")
     args = ap.parse_args()
+    # Artifacts belong beside the model they came from; a fixed OUT would
+    # overwrite model-1's export with model-2's.
+    out_dir = args.out or args.model.parent
 
     import tensorflow as tf
     model = tf.keras.models.load_model(args.model)
-    norm = np.load(OUT / "normalisation.npz")
+    norm = np.load(out_dir / "normalisation.npz")
     m4, s4 = norm["mean"][:, None], norm["std"][:, None]
 
     print("=" * 78)
@@ -107,7 +112,7 @@ def main() -> int:
     conv.inference_output_type = tf.int8
     t0 = time.time()
     blob = conv.convert()
-    path = OUT / "kws_int8.tflite"
+    path = out_dir / "kws_int8.tflite"
     path.write_bytes(blob)
     print(f"\nexported  {path}  ({len(blob):,} bytes, {time.time() - t0:.0f}s)")
 
@@ -135,7 +140,7 @@ def main() -> int:
 
     drift = float(np.abs(p_float - p_int8).max())
     corr = float(np.corrcoef(p_float, p_int8)[0, 1])
-    clip_eval_path = OUT / "evaluation_clip.json"
+    clip_eval_path = out_dir / "evaluation_clip.json"
     thr = json.loads(clip_eval_path.read_text(encoding="utf-8"))["threshold"] \
         if clip_eval_path.is_file() else 0.5
     flips = float(((p_float >= thr) != (p_int8 >= thr)).mean())
@@ -178,9 +183,9 @@ def main() -> int:
             "with the float model the accuracy was measured on.",
         ],
     }
-    (OUT / "export_tflite.json").write_text(json.dumps(rec, indent=2) + "\n",
+    (out_dir / "export_tflite.json").write_text(json.dumps(rec, indent=2) + "\n",
                                             encoding="utf-8")
-    print(f"\nwrote {OUT / 'export_tflite.json'}")
+    print(f"\nwrote {out_dir / 'export_tflite.json'}")
     print("=" * 78)
     print("QUANTISATION PARITY: " + ("PASS" if passed else "FAIL"))
     if not passed:
