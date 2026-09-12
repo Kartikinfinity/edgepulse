@@ -19,6 +19,7 @@ Requires pyserial. It ships with PlatformIO:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import struct
 import sys
@@ -201,6 +202,31 @@ def record(ser: serial.Serial, duration_ms: int) -> tuple[bytearray, dict]:
 # measured -34.2 dB (3/15 usable). -30 dB sits between them.
 LEVEL_TARGET_DB = -30.0
 
+# Certifying a take SPEECH-FREE cannot use the speech-span rule. That rule is
+# noise-floor-relative, and on quiet speech it finds only a 0-140 ms fragment -
+# which is precisely why 37 takes were lost to "TOO QUIET". Asking it to prove
+# absence of speech is circular, and measured so: it passed 59 of 59 takes that
+# contained a real keyword. EXP-007 already withdrew a false-alarm figure
+# (1293/hour) to exactly this contamination.
+#
+# These three describe speech directly instead of relying on level:
+#   sd   standard deviation of the 300-3400 Hz envelope. Speech modulates;
+#        stationary room tone does not.
+#   p95  95th-percentile excursion above the envelope median.
+#   mod  2-8 Hz modulation energy against a 20-45 Hz reference - the syllable
+#        rate. This survives at low SNR where absolute level does not.
+#
+# Calibrated on 7 verified speech-free takes and 59 containing speech: 0 of 7
+# wrongly rejected, 18 of 18 clear-speech takes caught, 38 of 41 quiet-keyword
+# takes caught.
+#
+# IT IS A NET, NOT A PROOF. Three takes holding a barely-audible keyword still
+# pass. The real guarantee is the recording protocol - the operator is silent
+# and the room is quiet - and this catches the accident, not the intent.
+AMBIENT_MAX_ENV_SD_DB = 1.5
+AMBIENT_MAX_P95_DB = 2.7
+AMBIENT_MAX_MOD_DB = 5.0
+
 
 def speech_check(pcm: bytes, content: str = "keyword") -> dict:
     """Would the DATASET FACTORY accept this take?
@@ -271,8 +297,41 @@ def speech_check(pcm: bytes, content: str = "keyword") -> dict:
         out["truncated"] = bool((edb.size - 1 - over[-1]) * 0.010 < 0.10)
 
     if content == "ambient":
-        out["usable"] = True
-        out["reason"] = "ambient take - no speech expected"
+        # A VERIFIED speech-free take. This mode used to return usable=True
+        # unconditionally, which is exactly backwards: these takes exist to
+        # measure the false-alarm rate, so a stray voice in one does not make a
+        # weaker negative, it makes the measurement wrong in the direction that
+        # flatters nothing and confuses everything. EXP-007 already lost a
+        # false-alarm figure (1293/hour, withdrawn) to a negative stream with
+        # real keywords hiding in it. Here the burden of proof is reversed: the
+        # take must be shown to contain NO speech.
+        #
+        e = edb - np.median(edb)
+        out["env_sd_db"] = float(e.std())
+        out["env_p95_db"] = float(np.percentile(e, 95))
+        out["mod_2_8hz_db"] = float("nan")
+        if e.size >= 32:
+            fr, P = signal.welch(e, fs=100.0, nperseg=min(128, e.size))
+            b, ref = (fr >= 2) & (fr <= 8), (fr >= 20) & (fr <= 45)
+            out["mod_2_8hz_db"] = float(
+                10 * np.log10((P[b].mean() + 1e-12) / (P[ref].mean() + 1e-12)))
+        hits = []
+        if out["env_sd_db"] > AMBIENT_MAX_ENV_SD_DB:
+            hits.append(f"envelope sd {out['env_sd_db']:.1f} dB")
+        if out["env_p95_db"] > AMBIENT_MAX_P95_DB:
+            hits.append(f"p95 {out['env_p95_db']:.1f} dB")
+        if out["mod_2_8hz_db"] == out["mod_2_8hz_db"] and \
+                out["mod_2_8hz_db"] > AMBIENT_MAX_MOD_DB:
+            hits.append(f"syllable-rate modulation {out['mod_2_8hz_db']:.1f} dB")
+        if hits:
+            out.update(usable=False,
+                       reason="SPEECH DETECTED (" + ", ".join(hits) +
+                              ") - a speech-free take must contain no voice")
+        else:
+            out.update(usable=True,
+                       reason=f"verified speech-free (sd {out['env_sd_db']:.1f}, "
+                              f"p95 {out['env_p95_db']:.1f}, "
+                              f"mod {out['mod_2_8hz_db']:.1f} dB)")
         return out
 
     if content == "speech":
@@ -394,9 +453,10 @@ def main() -> int:
 
     # Ambient/silence captures legitimately contain no speech.
     if args.expect_speech is None:
-        args.expect_speech = not any(t in args.record.lower()
-                                     for t in ("silence", "ambient", "noise", "roomtone"))
-    if not args.expect_speech:
+        args.expect_speech = args.content != "ambient"
+    if args.content == "ambient":
+        # A spoken "3, 2, 1" would put the operator's voice into a take whose
+        # whole purpose is to contain none.
         args.no_prompt = True
     n_no_speech = 0
 
@@ -472,15 +532,57 @@ def main() -> int:
         elif abs(drift) > 1.0:
             flag = "LENGTH"
             rc = 1
-        elif args.expect_speech and not chk["usable"]:
+        elif not chk["usable"]:
+            # Driven by --content, not by guessing from the label. An ambient
+            # take that turns out to hold a voice must be flagged just as loudly
+            # as a keyword take that holds none - it is the same failure, and
+            # for the false-alarm measurement it is the more damaging one.
             flag = chk["reason"]
             rc = 1
             n_no_speech += 1
+        if args.content == "ambient":
+            detail = (f"sd={chk['env_sd_db']:.1f} p95={chk['env_p95_db']:.1f} "
+                      f"mod={chk['mod_2_8hz_db']:.1f} dB")
+        else:
+            detail = (f"peak={chk['band_peak_db']:.0f} dB "
+                      f"span={chk['span_ms']:.0f} ms")
         print(f"  {got}/{exp} samples ({drift:+.2f}%)  lost={stats['lost_blocks']} "
-              f"overrun={stats['overrun_blocks']}  "
-              f"peak={chk['band_peak_db']:.0f} dB  span={chk['span_ms']:.0f} ms  [{flag}]")
+              f"overrun={stats['overrun_blocks']}  {detail}  [{flag}]")
         if flag not in ("ok", "DROPOUTS", "LENGTH"):
             print(f"        ^ REJECTED: {chk['reason']}. Re-record this take.")
+
+        # Append-only session ledger. The per-take JSON already holds this, but
+        # a single file per session is what makes "why did this session yield 3
+        # of 15?" answerable at a glance instead of by opening 15 files.
+        ledger = outdir / "_takes.csv"
+        new = not ledger.is_file()
+        with ledger.open("a", newline="", encoding="utf-8") as fh:
+            wtr = csv.DictWriter(fh, fieldnames=[
+                "clip", "utc", "content", "label", "accepted", "reason",
+                "span_ms", "band_peak_db", "snr_db", "env_sd_db", "env_p95_db",
+                "mod_2_8hz_db", "truncated", "samples", "lost_blocks",
+                "distance_m", "volume", "pace", "environment", "notes"])
+            if new:
+                wtr.writeheader()
+            def _n(v):
+                return "" if v is None or v != v else round(float(v), 2)
+            wtr.writerow({
+                "clip": base, "utc": datetime.now(timezone.utc).isoformat(),
+                "content": args.content, "label": args.record,
+                "accepted": bool(chk["usable"]), "reason": chk["reason"],
+                "span_ms": _n(chk.get("span_ms")),
+                "band_peak_db": _n(chk.get("band_peak_db")),
+                "snr_db": _n(chk.get("snr_db")),
+                "env_sd_db": _n(chk.get("env_sd_db")),
+                "env_p95_db": _n(chk.get("env_p95_db")),
+                "mod_2_8hz_db": _n(chk.get("mod_2_8hz_db")),
+                "truncated": chk.get("truncated"),
+                "samples": stats.get("samples", 0),
+                "lost_blocks": stats.get("lost_blocks", 0),
+                "distance_m": args.distance, "volume": args.volume,
+                "pace": args.rate_label, "environment": args.environment,
+                "notes": args.notes,
+            })
 
     ser.close()
     print(f"\nwrote to {outdir}")
